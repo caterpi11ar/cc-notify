@@ -31,9 +31,6 @@ coverage/
 # Logs
 *.log
 
-# Lock files (keep pnpm-lock.yaml)
-Cargo.lock
-
 # Separate projects in parent dir
 cc-switch/
 code-notify/
