@@ -4,7 +4,7 @@
 
 ### Notification Manager for AI CLI Tools
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/caterpi11ar/cc-notify/releases)
+[![Version](https://img.shields.io/badge/version-0.1.1-blue.svg)](https://github.com/caterpi11ar/cc-notify/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/caterpi11ar/cc-notify/releases)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-163%20passing-brightgreen.svg)]()
@@ -316,9 +316,21 @@ The badge count resets when you restart the app. You can also disable the Tray B
 </details>
 
 <details>
-<summary><strong>macOS shows "unidentified developer" warning</strong></summary>
+<summary><strong>macOS: "CC Notify" cannot be opened / unidentified developer</strong></summary>
 
-Go to **System Settings → Privacy & Security → Open Anyway**. This is required because the app is not yet signed with an Apple Developer certificate.
+The app is not signed with an Apple Developer certificate. macOS Gatekeeper blocks apps downloaded from the internet that are unsigned.
+
+**Option 1** — Right-click the app → select "Open" → click "Open" in the dialog (only needed once).
+
+**Option 2** — Go to **System Settings → Privacy & Security**, scroll down and click **"Open Anyway"**.
+
+**Option 3** — Remove the quarantine flag via Terminal:
+
+```bash
+xattr -cr "/Applications/CC Notify.app"
+```
+
+After any of these steps, the app will open normally going forward.
 
 </details>
 

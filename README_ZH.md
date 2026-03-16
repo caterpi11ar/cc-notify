@@ -137,9 +137,21 @@ CC Notify 支持 **Claude Code**、**Codex** 和 **Gemini CLI**。可在 设置 
 </details>
 
 <details>
-<summary><strong>macOS 提示"未知开发者"</strong></summary>
+<summary><strong>macOS 提示"无法打开"或"未知开发者"</strong></summary>
 
-前往 **系统设置 → 隐私与安全性 → 仍要打开**。这是因为应用尚未使用 Apple 开发者证书签名。
+应用尚未使用 Apple 开发者证书签名，macOS Gatekeeper 会阻止从网上下载的未签名应用。
+
+**方法一** — 右键点击应用 → 选择"打开" → 在弹窗中点击"打开"（只需一次）。
+
+**方法二** — 前往 **系统设置 → 隐私与安全性**，下滑找到 **"仍要打开"** 按钮。
+
+**方法三** — 在终端中移除隔离标记：
+
+```bash
+xattr -cr "/Applications/CC Notify.app"
+```
+
+以上任一方法操作后，后续即可正常打开。
 
 </details>
 

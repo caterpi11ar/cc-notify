@@ -83,36 +83,8 @@ jobs:
       - name: Build Tauri app
         env:
           RUST_TARGET: ${{ matrix.rust-target }}
+          APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && '-' || '' }}
         run: pnpm tauri build --target ${{ matrix.rust-target }}
-
-      - name: Ad-hoc sign and repackage macOS app
-        if: runner.os == 'macOS'
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.rust-target }}/release/bundle"
-          echo "Looking for .app in $BUNDLE_DIR"
-          find "$BUNDLE_DIR" -name "*.app" -type d 2>/dev/null || true
-
-          APP_PATH=$(find "$BUNDLE_DIR" -name "*.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Warning: No .app found, skipping signing"
-            exit 0
-          fi
-
-          echo "Signing $APP_PATH"
-          codesign --force --deep --sign - "$APP_PATH"
-
-          DMG_PATH=$(find "$BUNDLE_DIR" -name "*.dmg" | head -1)
-          if [ -z "$DMG_PATH" ]; then
-            echo "Warning: No .dmg found, skipping repackage"
-            exit 0
-          fi
-
-          APP_NAME=$(basename "$APP_PATH")
-          DMG_NAME=$(basename "$DMG_PATH")
-          DMG_DIR=$(dirname "$DMG_PATH")
-
-          rm "$DMG_PATH"
-          hdiutil create -volname "${APP_NAME%.app}" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_DIR/$DMG_NAME"
 
       - name: Upload artifacts
         env:
