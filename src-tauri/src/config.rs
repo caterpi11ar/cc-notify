@@ -22,6 +22,12 @@ pub fn get_app_config_dir() -> PathBuf {
     get_home_dir().join(".cc-notify")
 }
 
+/// Get cc-notify CLI binary install path (~/.cc-notify/bin/cc-notify)
+pub fn get_cli_bin_path() -> PathBuf {
+    let name = if cfg!(windows) { "cc-notify.exe" } else { "cc-notify" };
+    get_app_config_dir().join("bin").join(name)
+}
+
 /// Get cc-notify database path
 pub fn get_db_path() -> PathBuf {
     get_app_config_dir().join("cc-notify.db")

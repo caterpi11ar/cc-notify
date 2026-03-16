@@ -1,9 +1,21 @@
 use std::path::PathBuf;
 
-/// Get the cc-notify binary path for hooks
+/// Get the cc-notify binary path for hooks.
+/// Priority: 1) app-installed (~/.cc-notify/bin/), 2) PATH lookup, 3) current_exe() fallback
 fn get_cc_notify_bin() -> String {
-    // Try to find cc-notify in PATH first
-    if let Ok(output) = std::process::Command::new("which")
+    // 1. Check the app-installed location
+    let installed = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".cc-notify")
+        .join("bin")
+        .join(if cfg!(windows) { "cc-notify.exe" } else { "cc-notify" });
+    if installed.exists() {
+        return installed.display().to_string();
+    }
+
+    // 2. Try to find cc-notify in PATH
+    let which_cmd = if cfg!(windows) { "where" } else { "which" };
+    if let Ok(output) = std::process::Command::new(which_cmd)
         .arg("cc-notify")
         .output()
     {
@@ -11,7 +23,8 @@ fn get_cc_notify_bin() -> String {
             return String::from_utf8_lossy(&output.stdout).trim().to_string();
         }
     }
-    // Fall back to the current binary path
+
+    // 3. Fall back to the current binary path
     std::env::current_exe()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "cc-notify".to_string())

@@ -63,7 +63,9 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri -> target
+          workspaces: |
+            src-tauri -> target
+            cc-notify-cli -> target
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
@@ -79,6 +81,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Tauri app
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
         run: pnpm tauri build --target ${{ matrix.rust-target }}
 
       - name: Upload artifacts

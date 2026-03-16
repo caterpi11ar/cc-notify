@@ -1,4 +1,5 @@
 mod channels;
+mod cli_installer;
 mod commands;
 mod config;
 mod database;
@@ -26,6 +27,9 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
+            // Auto-install CLI binary to ~/.cc-notify/bin/
+            cli_installer::install_cli(app);
+
             let db = Database::init().map_err(|e| {
                 log::error!("Database init failed: {e}");
                 e.to_string()

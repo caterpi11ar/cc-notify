@@ -9,6 +9,8 @@
     "tauri": "tauri",
     "dev:renderer": "vite",
     "build:renderer": "vite build",
+    "build:cli": "bash scripts/build-cli.sh",
+    "build:all": "pnpm run build:cli && pnpm run build:renderer",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "test:unit": "vitest run",
