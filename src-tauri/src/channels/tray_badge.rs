@@ -67,6 +67,13 @@ impl NotificationChannel for TrayBadgeChannel {
             project: None,
             metadata: serde_json::Value::Null,
             timestamp: chrono::Utc::now().timestamp(),
+            title: None,
+            model: None,
+            cwd: None,
+            last_assistant_message: None,
+            source: None,
+            reason: None,
+            agent_type: None,
         };
         self.send(config, &test_msg).await
     }

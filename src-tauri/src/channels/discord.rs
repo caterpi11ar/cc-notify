@@ -59,34 +59,32 @@ impl NotificationChannel for DiscordChannel {
             .get("avatar_url")
             .and_then(|v| v.as_str());
 
-        let embed_color = config
-            .params
-            .get("embed_color")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(5814783); // Default blue color
+        let header = message.event_header();
+        let body = message.message_body();
+        let color = message.event_color();
 
-        let text = message
-            .message
-            .as_deref()
-            .unwrap_or(&message.event);
+        // Build fields
+        let mut fields = Vec::new();
+        if let Some(project) = &message.project {
+            if !project.is_empty() {
+                fields.push(serde_json::json!({"name": "Project", "value": project, "inline": true}));
+            }
+        }
+        if let Some(tool) = &message.tool {
+            fields.push(serde_json::json!({"name": "Tool", "value": tool, "inline": true}));
+        }
+        if let Some(model) = &message.model {
+            fields.push(serde_json::json!({"name": "Model", "value": model, "inline": true}));
+        }
 
-        let mut embed = serde_json::json!({
-            "title": format!("CC Notify: {}", message.event),
-            "description": text,
-            "color": embed_color,
+        let embed = serde_json::json!({
+            "title": header,
+            "description": body,
+            "color": color,
+            "fields": fields,
+            "footer": {"text": "CC Notify"},
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
-
-        // Add tool field if present
-        if let Some(tool) = &message.tool {
-            embed["fields"] = serde_json::json!([
-                {
-                    "name": "Tool",
-                    "value": tool,
-                    "inline": true
-                }
-            ]);
-        }
 
         let mut payload = serde_json::json!({
             "username": username,
@@ -123,16 +121,26 @@ impl NotificationChannel for DiscordChannel {
 
     async fn test(&self, config: &ChannelConfig) -> Result<SendResult, AppError> {
         self.validate_config(config)?;
-        let test_msg = NotificationMessage {
-            event: "test".to_string(),
-            event_type: None,
-            message: Some("Test notification from CC Notify".to_string()),
-            tool: Some("cc-notify".to_string()),
-            session_id: None,
-            project: None,
-            metadata: serde_json::Value::Null,
-            timestamp: chrono::Utc::now().timestamp(),
-        };
-        self.send(config, &test_msg).await
+        self.send(config, &test_message()).await
+    }
+}
+
+fn test_message() -> NotificationMessage {
+    NotificationMessage {
+        event: "test".to_string(),
+        event_type: None,
+        message: Some("Test notification from CC Notify".to_string()),
+        tool: Some("cc-notify".to_string()),
+        session_id: None,
+        project: None,
+        metadata: serde_json::Value::Null,
+        timestamp: chrono::Utc::now().timestamp(),
+        title: None,
+        model: None,
+        cwd: None,
+        last_assistant_message: None,
+        source: None,
+        reason: None,
+        agent_type: None,
     }
 }

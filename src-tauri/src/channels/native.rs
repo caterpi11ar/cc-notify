@@ -29,14 +29,15 @@ impl NotificationChannel for NativeChannel {
         _config: &ChannelConfig,
         message: &NotificationMessage,
     ) -> Result<SendResult, AppError> {
-        let title = format!("CC Notify: {}", message.event);
-        let body = message.message.as_deref().unwrap_or(&message.event);
+        let header = message.event_header();
+        let title = format!("CC Notify: {}", header);
+        let body = message.message_body();
 
         self.app_handle
             .notification()
             .builder()
             .title(&title)
-            .body(body)
+            .body(&body)
             .show()
             .map_err(|e| AppError::Channel(format!("Native notification failed: {e}")))?;
 
@@ -57,6 +58,13 @@ impl NotificationChannel for NativeChannel {
             project: None,
             metadata: serde_json::Value::Null,
             timestamp: chrono::Utc::now().timestamp(),
+            title: None,
+            model: None,
+            cwd: None,
+            last_assistant_message: None,
+            source: None,
+            reason: None,
+            agent_type: None,
         };
         self.send(config, &test_msg).await
     }

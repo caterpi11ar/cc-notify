@@ -40,10 +40,8 @@ impl NotificationChannel for TeamsChannel {
                 AppError::InvalidInput("Teams webhook_url is required".to_string())
             })?;
 
-        let text = message
-            .message
-            .as_deref()
-            .unwrap_or(&message.event);
+        let header = message.event_header();
+        let body = message.message_body();
 
         // Use Adaptive Card format for Teams
         let payload = serde_json::json!({
@@ -61,11 +59,11 @@ impl NotificationChannel for TeamsChannel {
                                 "type": "TextBlock",
                                 "size": "Medium",
                                 "weight": "Bolder",
-                                "text": format!("CC Notify: {}", message.event)
+                                "text": format!("CC Notify: {}", header)
                             },
                             {
                                 "type": "TextBlock",
-                                "text": text,
+                                "text": body,
                                 "wrap": true
                             },
                             {
@@ -104,17 +102,7 @@ impl NotificationChannel for TeamsChannel {
 
     async fn test(&self, config: &ChannelConfig) -> Result<SendResult, AppError> {
         self.validate_config(config)?;
-        let test_msg = NotificationMessage {
-            event: "test".to_string(),
-            event_type: None,
-            message: Some("Test notification from CC Notify".to_string()),
-            tool: Some("cc-notify".to_string()),
-            session_id: None,
-            project: None,
-            metadata: serde_json::Value::Null,
-            timestamp: chrono::Utc::now().timestamp(),
-        };
-        self.send(config, &test_msg).await
+        self.send(config, &test_message()).await
     }
 }
 
@@ -129,9 +117,18 @@ fn build_facts(message: &NotificationMessage) -> Vec<serde_json::Value> {
     }
 
     if let Some(project) = &message.project {
+        if !project.is_empty() {
+            facts.push(serde_json::json!({
+                "title": "Project",
+                "value": project
+            }));
+        }
+    }
+
+    if let Some(model) = &message.model {
         facts.push(serde_json::json!({
-            "title": "Project",
-            "value": project
+            "title": "Model",
+            "value": model
         }));
     }
 
@@ -148,4 +145,24 @@ fn build_facts(message: &NotificationMessage) -> Vec<serde_json::Value> {
     }));
 
     facts
+}
+
+fn test_message() -> NotificationMessage {
+    NotificationMessage {
+        event: "test".to_string(),
+        event_type: None,
+        message: Some("Test notification from CC Notify".to_string()),
+        tool: Some("cc-notify".to_string()),
+        session_id: None,
+        project: None,
+        metadata: serde_json::Value::Null,
+        timestamp: chrono::Utc::now().timestamp(),
+        title: None,
+        model: None,
+        cwd: None,
+        last_assistant_message: None,
+        source: None,
+        reason: None,
+        agent_type: None,
+    }
 }

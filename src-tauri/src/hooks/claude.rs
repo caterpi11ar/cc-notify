@@ -39,7 +39,7 @@ pub fn install() -> Result<(), AppError> {
             "matcher": "idle_prompt|permission_prompt|auth_success|elicitation_dialog",
             "hooks": [{
                 "type": "command",
-                "command": format!("{} send --event notification --type $HOOK_MATCH --tool claude --silent", bin)
+                "command": format!("{} send --event notification --tool claude --silent", bin)
             }]
         }],
         "SubagentStop": [{

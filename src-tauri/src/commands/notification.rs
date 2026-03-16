@@ -11,6 +11,13 @@ pub async fn send_notification(
     tool: Option<String>,
     session_id: Option<String>,
     project: Option<String>,
+    title: Option<String>,
+    model: Option<String>,
+    cwd: Option<String>,
+    last_assistant_message: Option<String>,
+    source: Option<String>,
+    reason: Option<String>,
+    agent_type: Option<String>,
 ) -> Result<Vec<SendResult>, String> {
     let msg = NotificationMessage {
         event,
@@ -21,6 +28,13 @@ pub async fn send_notification(
         project,
         metadata: serde_json::Value::Null,
         timestamp: chrono::Utc::now().timestamp(),
+        title,
+        model,
+        cwd,
+        last_assistant_message,
+        source,
+        reason,
+        agent_type,
     };
 
     // Stub: until NotificationService is fully implemented, return empty results
@@ -41,6 +55,13 @@ pub async fn test_notification(
         None,
         Some("Test notification from CC Notify".to_string()),
         Some("cc-notify".to_string()),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
         None,
         None,
     )

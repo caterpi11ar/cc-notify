@@ -1,4 +1,6 @@
 use clap::{Parser, Subcommand};
+use serde::Deserialize;
+use std::io::Read;
 use std::path::PathBuf;
 
 mod db;
@@ -93,6 +95,43 @@ enum HooksAction {
     Test,
 }
 
+/// JSON input from Claude Code / Gemini CLI hooks (passed via stdin)
+#[derive(Deserialize, Default, Debug)]
+#[serde(default)]
+struct HookInput {
+    session_id: Option<String>,
+    transcript_path: Option<String>,
+    cwd: Option<String>,
+    hook_event_name: Option<String>,
+    // Stop / SubagentStop
+    last_assistant_message: Option<String>,
+    // SubagentStop
+    agent_type: Option<String>,
+    agent_id: Option<String>,
+    // Notification
+    notification_type: Option<String>,
+    message: Option<String>,
+    title: Option<String>,
+    // SessionStart
+    source: Option<String>,
+    model: Option<String>,
+    // SessionEnd
+    reason: Option<String>,
+}
+
+/// Read and parse stdin JSON when piped (non-TTY)
+fn read_stdin_hook_input() -> HookInput {
+    if atty::is(atty::Stream::Stdin) {
+        return HookInput::default();
+    }
+    let mut buf = String::new();
+    if std::io::stdin().read_to_string(&mut buf).is_ok() && !buf.trim().is_empty() {
+        serde_json::from_str(&buf).unwrap_or_default()
+    } else {
+        HookInput::default()
+    }
+}
+
 fn get_db_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -127,23 +166,40 @@ fn main() {
             metadata,
             silent,
         } => {
+            let stdin = read_stdin_hook_input();
+
             let metadata_value = metadata
                 .as_deref()
                 .map(|m| serde_json::from_str(m).unwrap_or(serde_json::Value::Null))
                 .unwrap_or(serde_json::Value::Null);
 
-            notify::send_notification(
-                &get_db_path(),
-                &event,
-                notification_type.as_deref(),
-                message.as_deref(),
-                &tool,
-                session_id.as_deref(),
-                project.as_deref(),
+            // Merge: CLI args take priority over stdin
+            let ctx = notify::NotificationContext {
+                event,
+                notification_type: notification_type.or(stdin.notification_type),
+                message,
+                tool,
+                session_id: session_id.or(stdin.session_id),
+                project: project.or_else(|| {
+                    stdin
+                        .cwd
+                        .as_deref()
+                        .map(notify::project_name_from_cwd)
+                }),
+                cwd: stdin.cwd,
                 tokens,
-                &metadata_value,
+                metadata: metadata_value,
                 silent,
-            )
+                last_assistant_message: stdin.last_assistant_message,
+                model: stdin.model,
+                source: stdin.source,
+                reason: stdin.reason,
+                agent_type: stdin.agent_type,
+                title: stdin.title,
+                stdin_message: stdin.message,
+            };
+
+            notify::send_notification(&get_db_path(), &ctx)
         }
         Commands::Hooks { action } => match action {
             HooksAction::Install { tool } => hooks::install(&tool),
@@ -193,18 +249,26 @@ fn main() {
             Ok(())
         }
         Commands::Test => {
-            notify::send_notification(
-                &get_db_path(),
-                "test",
-                None,
-                Some("This is a test notification from CC Notify"),
-                "cc-notify",
-                None,
-                None,
-                None,
-                &serde_json::Value::Null,
-                false,
-            )
+            let ctx = notify::NotificationContext {
+                event: "test".to_string(),
+                notification_type: None,
+                message: Some("This is a test notification from CC Notify".to_string()),
+                tool: "cc-notify".to_string(),
+                session_id: None,
+                project: None,
+                cwd: None,
+                tokens: None,
+                metadata: serde_json::Value::Null,
+                silent: false,
+                last_assistant_message: None,
+                model: None,
+                source: None,
+                reason: None,
+                agent_type: None,
+                title: None,
+                stdin_message: None,
+            };
+            notify::send_notification(&get_db_path(), &ctx)
         }
     };
 

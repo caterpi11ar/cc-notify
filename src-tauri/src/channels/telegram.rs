@@ -72,16 +72,24 @@ impl NotificationChannel for TelegramChannel {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let text = message
-            .message
-            .as_deref()
-            .unwrap_or(&message.event);
+        let header = message.event_header();
+        let body = message.message_body();
+        let footer = message.context_footer();
 
-        let formatted_text = format!(
-            "<b>CC Notify: {}</b>\n{}",
-            html_escape(&message.event),
-            html_escape(text)
-        );
+        let formatted_text = if body.is_empty() {
+            format!(
+                "<b>{}</b>\n\n<i>{}</i>",
+                html_escape(&header),
+                html_escape(&footer),
+            )
+        } else {
+            format!(
+                "<b>{}</b>\n\n{}\n\n<i>{}</i>",
+                html_escape(&header),
+                html_escape(&body),
+                html_escape(&footer),
+            )
+        };
 
         let url = format!(
             "https://api.telegram.org/bot{}/sendMessage",
@@ -136,17 +144,7 @@ impl NotificationChannel for TelegramChannel {
 
     async fn test(&self, config: &ChannelConfig) -> Result<SendResult, AppError> {
         self.validate_config(config)?;
-        let test_msg = NotificationMessage {
-            event: "test".to_string(),
-            event_type: None,
-            message: Some("Test notification from CC Notify".to_string()),
-            tool: Some("cc-notify".to_string()),
-            session_id: None,
-            project: None,
-            metadata: serde_json::Value::Null,
-            timestamp: chrono::Utc::now().timestamp(),
-        };
-        self.send(config, &test_msg).await
+        self.send(config, &test_message()).await
     }
 }
 
@@ -156,4 +154,24 @@ fn html_escape(s: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+}
+
+fn test_message() -> NotificationMessage {
+    NotificationMessage {
+        event: "test".to_string(),
+        event_type: None,
+        message: Some("Test notification from CC Notify".to_string()),
+        tool: Some("cc-notify".to_string()),
+        session_id: None,
+        project: None,
+        metadata: serde_json::Value::Null,
+        timestamp: chrono::Utc::now().timestamp(),
+        title: None,
+        model: None,
+        cwd: None,
+        last_assistant_message: None,
+        source: None,
+        reason: None,
+        agent_type: None,
+    }
 }

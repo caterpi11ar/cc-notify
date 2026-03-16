@@ -50,28 +50,52 @@ impl NotificationChannel for SlackChannel {
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let text = message
-            .message
-            .as_deref()
-            .unwrap_or(&message.event);
+        let header = message.event_header();
+        let body = message.message_body();
+        let footer = message.context_footer();
 
-        let formatted_text = if mention.is_empty() {
-            format!("*CC Notify: {}*\n{}", message.event, text)
+        let header_text = if mention.is_empty() {
+            header.clone()
         } else {
-            format!("{} *CC Notify: {}*\n{}", mention, message.event, text)
+            format!("{} {}", mention, header)
         };
 
-        let payload = serde_json::json!({
-            "text": formatted_text,
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": formatted_text
-                    }
+        let mut blocks = vec![
+            // Header block
+            serde_json::json!({
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": header_text,
+                    "emoji": true
                 }
-            ]
+            }),
+        ];
+
+        // Body section (skip if empty)
+        if !body.is_empty() {
+            blocks.push(serde_json::json!({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": body
+                }
+            }));
+        }
+
+        // Context footer
+        blocks.push(serde_json::json!({
+            "type": "context",
+            "elements": [{
+                "type": "mrkdwn",
+                "text": footer
+            }]
+        }));
+
+        let fallback = format!("{}\n{}", header_text, body);
+        let payload = serde_json::json!({
+            "text": fallback,
+            "blocks": blocks
         });
 
         let client = reqwest::Client::new();
@@ -100,16 +124,26 @@ impl NotificationChannel for SlackChannel {
 
     async fn test(&self, config: &ChannelConfig) -> Result<SendResult, AppError> {
         self.validate_config(config)?;
-        let test_msg = NotificationMessage {
-            event: "test".to_string(),
-            event_type: None,
-            message: Some("Test notification from CC Notify".to_string()),
-            tool: Some("cc-notify".to_string()),
-            session_id: None,
-            project: None,
-            metadata: serde_json::Value::Null,
-            timestamp: chrono::Utc::now().timestamp(),
-        };
-        self.send(config, &test_msg).await
+        self.send(config, &test_message()).await
+    }
+}
+
+fn test_message() -> NotificationMessage {
+    NotificationMessage {
+        event: "test".to_string(),
+        event_type: None,
+        message: Some("Test notification from CC Notify".to_string()),
+        tool: Some("cc-notify".to_string()),
+        session_id: None,
+        project: None,
+        metadata: serde_json::Value::Null,
+        timestamp: chrono::Utc::now().timestamp(),
+        title: None,
+        model: None,
+        cwd: None,
+        last_assistant_message: None,
+        source: None,
+        reason: None,
+        agent_type: None,
     }
 }

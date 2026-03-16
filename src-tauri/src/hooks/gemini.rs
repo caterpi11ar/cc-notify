@@ -31,7 +31,7 @@ pub fn install() -> Result<(), AppError> {
             "matcher": "idle_prompt|permission_prompt",
             "hooks": [{
                 "type": "command",
-                "command": format!("{} send --event notification --type $HOOK_MATCH --tool gemini --silent", bin)
+                "command": format!("{} send --event notification --tool gemini --silent", bin)
             }]
         }],
         "AfterAgent": [{

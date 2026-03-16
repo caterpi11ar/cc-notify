@@ -25,3 +25,4 @@ toml_edit = "0.22"
 tempfile = "3"
 uuid = { version = "1.11", features = ["v4"] }
 thiserror = "2.0"
+atty = "0.2"

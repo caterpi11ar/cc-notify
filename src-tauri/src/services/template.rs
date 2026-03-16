@@ -28,6 +28,35 @@ impl TemplateEngine {
         if let Some(event_type) = &message.event_type {
             result = result.replace("{{event_type}}", event_type);
         }
+        // New template variables
+        result = result.replace(
+            "{{title}}",
+            message.title.as_deref().unwrap_or(""),
+        );
+        result = result.replace(
+            "{{model}}",
+            message.model.as_deref().unwrap_or(""),
+        );
+        result = result.replace(
+            "{{cwd}}",
+            message.cwd.as_deref().unwrap_or(""),
+        );
+        result = result.replace(
+            "{{summary}}",
+            message.last_assistant_message.as_deref().unwrap_or(""),
+        );
+        result = result.replace(
+            "{{source}}",
+            message.source.as_deref().unwrap_or(""),
+        );
+        result = result.replace(
+            "{{reason}}",
+            message.reason.as_deref().unwrap_or(""),
+        );
+        result = result.replace(
+            "{{agent_type}}",
+            message.agent_type.as_deref().unwrap_or(""),
+        );
         result
     }
 }

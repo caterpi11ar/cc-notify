@@ -99,17 +99,7 @@ impl NotificationChannel for WebhookChannel {
 
     async fn test(&self, config: &ChannelConfig) -> Result<SendResult, AppError> {
         self.validate_config(config)?;
-        let test_msg = NotificationMessage {
-            event: "test".to_string(),
-            event_type: None,
-            message: Some("Test notification from CC Notify".to_string()),
-            tool: Some("cc-notify".to_string()),
-            session_id: None,
-            project: None,
-            metadata: serde_json::Value::Null,
-            timestamp: chrono::Utc::now().timestamp(),
-        };
-        self.send(config, &test_msg).await
+        self.send(config, &test_message()).await
     }
 }
 
@@ -125,17 +115,29 @@ impl WebhookChannel {
             .and_then(|v| v.as_str())
             .ok_or_else(|| AppError::InvalidInput("Feishu webhook_url is required".to_string()))?;
 
-        let text = message
-            .message
-            .as_deref()
-            .unwrap_or(&message.event);
+        let header = message.event_header();
+        let body = message.message_body();
+        let color = message.feishu_header_color();
+        let footer = message.context_footer();
 
-        let content = format!("CC Notify: {}\n{}", message.event, text);
+        let mut elements = Vec::new();
+        if !body.is_empty() {
+            elements.push(serde_json::json!({"tag": "markdown", "content": body}));
+        }
+        elements.push(serde_json::json!({"tag": "hr"}));
+        elements.push(serde_json::json!({
+            "tag": "note",
+            "elements": [{"tag": "plain_text", "content": footer}]
+        }));
 
         let payload = serde_json::json!({
-            "msg_type": "text",
-            "content": {
-                "text": content
+            "msg_type": "interactive",
+            "card": {
+                "header": {
+                    "title": {"tag": "plain_text", "content": header},
+                    "template": color
+                },
+                "elements": elements
             }
         });
 
@@ -200,7 +202,7 @@ impl WebhookChannel {
 
         let client = reqwest::Client::new();
 
-        // Build the request body
+        // Build the request body — rich JSON with all context
         let body = if let Some(body_template) = config.params.get("body_template").and_then(|v| v.as_str()) {
             let rendered = render_template(body_template, message);
             serde_json::from_str::<serde_json::Value>(&rendered).unwrap_or_else(|_| {
@@ -210,12 +212,18 @@ impl WebhookChannel {
             serde_json::json!({
                 "event": message.event,
                 "event_type": message.event_type,
-                "message": message.message,
-                "tool": message.tool,
-                "session_id": message.session_id,
+                "message": message.message_body(),
                 "project": message.project,
+                "tool": message.tool,
+                "model": message.model,
+                "session_id": message.session_id,
+                "cwd": message.cwd,
+                "summary": message.last_assistant_message,
+                "agent_type": message.agent_type,
+                "source": message.source,
+                "reason": message.reason,
                 "metadata": message.metadata,
-                "timestamp": message.timestamp,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
             })
         };
 
@@ -266,9 +274,37 @@ fn render_template(template: &str, message: &NotificationMessage) -> String {
     result = result.replace("{{tool}}", message.tool.as_deref().unwrap_or(""));
     result = result.replace("{{session_id}}", message.session_id.as_deref().unwrap_or(""));
     result = result.replace("{{project}}", message.project.as_deref().unwrap_or(""));
-    result = result.replace("{{timestamp}}", &message.timestamp.to_string());
+    result = result.replace("{{timestamp}}", &chrono::Utc::now().to_rfc3339());
     if let Some(event_type) = &message.event_type {
         result = result.replace("{{event_type}}", event_type);
     }
+    // New template variables
+    result = result.replace("{{title}}", message.title.as_deref().unwrap_or(""));
+    result = result.replace("{{model}}", message.model.as_deref().unwrap_or(""));
+    result = result.replace("{{cwd}}", message.cwd.as_deref().unwrap_or(""));
+    result = result.replace("{{summary}}", message.last_assistant_message.as_deref().unwrap_or(""));
+    result = result.replace("{{source}}", message.source.as_deref().unwrap_or(""));
+    result = result.replace("{{reason}}", message.reason.as_deref().unwrap_or(""));
+    result = result.replace("{{agent_type}}", message.agent_type.as_deref().unwrap_or(""));
     result
+}
+
+fn test_message() -> NotificationMessage {
+    NotificationMessage {
+        event: "test".to_string(),
+        event_type: None,
+        message: Some("Test notification from CC Notify".to_string()),
+        tool: Some("cc-notify".to_string()),
+        session_id: None,
+        project: None,
+        metadata: serde_json::Value::Null,
+        timestamp: chrono::Utc::now().timestamp(),
+        title: None,
+        model: None,
+        cwd: None,
+        last_assistant_message: None,
+        source: None,
+        reason: None,
+        agent_type: None,
+    }
 }
