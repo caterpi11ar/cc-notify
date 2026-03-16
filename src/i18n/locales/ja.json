@@ -1,0 +1,160 @@
+{
+  "app": {
+    "title": "CC Notify"
+  },
+  "tabs": {
+    "channels": "チャンネル",
+    "events": "イベント",
+    "rules": "ルール",
+    "history": "履歴",
+    "settings": "設定"
+  },
+  "channels": {
+    "title": "通知チャンネル",
+    "add": "チャンネルを追加",
+    "empty": "チャンネルが設定されていません",
+    "types": {
+      "native": "システム通知",
+      "slack": "Slack",
+      "discord": "Discord",
+      "teams": "Microsoft Teams",
+      "telegram": "Telegram",
+      "webhook": "HTTP Webhook",
+      "sound": "サウンド",
+      "voice": "音声 (macOS)",
+      "tray_badge": "トレイバッジ"
+    },
+    "template": "テンプレート",
+    "templates": {
+      "generic": "汎用",
+      "feishu": "Feishu（ラーク）"
+    },
+    "test": "テスト",
+    "testSuccess": "テスト通知を送信しました",
+    "testFailed": "テスト失敗：{{error}}",
+    "name": "チャンネル名",
+    "type": "チャンネルタイプ",
+    "selectType": "チャンネルタイプを選択",
+    "config": "設定",
+    "webhookUrl": "Webhook URL",
+    "botToken": "Bot Token",
+    "chatId": "Chat ID",
+    "createSuccess": "チャンネルを作成しました",
+    "updateSuccess": "チャンネルを更新しました",
+    "deleteSuccess": "チャンネルを削除しました",
+    "deleteConfirm": "このチャンネルを削除しますか？",
+    "enabled": "有効",
+    "disabled": "無効"
+  },
+  "events": {
+    "title": "イベントタイプとルーティング",
+    "empty": "イベントタイプが見つかりません",
+    "categories": {
+      "claude_hook": "Claude Code Hooks",
+      "extended": "拡張イベント",
+      "custom": "カスタムルール"
+    },
+    "routing": "ルーティング",
+    "noChannels": "利用可能なチャンネルがありません",
+    "updateSuccess": "イベントを更新しました",
+    "routingUpdated": "ルーティングを更新しました"
+  },
+  "rules": {
+    "title": "カスタムルール",
+    "add": "ルールを追加",
+    "empty": "カスタムルールはありません",
+    "types": {
+      "keyword": "キーワード一致",
+      "regex": "正規表現一致",
+      "file_change": "ファイル変更",
+      "custom_event": "カスタムイベント"
+    },
+    "name": "ルール名",
+    "type": "ルールタイプ",
+    "selectType": "ルールタイプを選択",
+    "pattern": "パターン",
+    "eventType": "関連イベントタイプ",
+    "selectEventType": "イベントタイプを選択",
+    "createSuccess": "ルールを作成しました",
+    "updateSuccess": "ルールを更新しました",
+    "deleteSuccess": "ルールを削除しました",
+    "deleteConfirm": "このルールを削除しますか？"
+  },
+  "history": {
+    "title": "通知履歴",
+    "empty": "まだ通知は送信されていません",
+    "clear": "履歴をクリア",
+    "clearConfirm": "すべての履歴をクリアしますか？",
+    "clearSuccess": "履歴をクリアしました",
+    "loadMore": "さらに読み込む",
+    "status": {
+      "sent": "送信済み",
+      "failed": "失敗",
+      "skipped": "スキップ"
+    },
+    "columns": {
+      "timestamp": "日時",
+      "event": "イベント",
+      "channel": "チャンネル",
+      "status": "ステータス",
+      "message": "メッセージ"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "general": "一般",
+    "quietHours": "おやすみ時間",
+    "quietHoursDesc": "指定時間帯の通知を抑制",
+    "quietHoursStart": "開始時刻",
+    "quietHoursEnd": "終了時刻",
+    "quietHoursDays": "有効な曜日",
+    "rateLimit": "レート制限",
+    "rateLimitDesc": "通知の過剰送信を防止",
+    "maxPerMinute": "1分あたりの最大数",
+    "cooldownSeconds": "クールダウン（秒）",
+    "killSwitch": "キルスイッチ",
+    "killSwitchDesc": "すべての通知をグローバルに無効化",
+    "killSwitchWarning": "これによりすべての通知の送信が停止します",
+    "sound": "サウンド",
+    "soundDesc": "通知送信時にサウンドを再生",
+    "volume": "音量",
+    "voice": "音声",
+    "voiceDesc": "通知を読み上げる（macOSのみ）",
+    "voiceName": "音声名",
+    "hooks": "Hooks 統合",
+    "hooksDesc": "AI CLIツールにhooksをインストール",
+    "hooksInstalled": "インストール済み",
+    "hooksNotInstalled": "未インストール",
+    "installSuccess": "Hookをインストールしました",
+    "uninstallSuccess": "Hookをアンインストールしました",
+    "language": "言語",
+    "historyRetention": "履歴保持日数",
+    "saveSuccess": "設定を保存しました",
+    "days": {
+      "mon": "月",
+      "tue": "火",
+      "wed": "水",
+      "thu": "木",
+      "fri": "金",
+      "sat": "土",
+      "sun": "日"
+    }
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "enable": "有効化",
+    "disable": "無効化",
+    "edit": "編集",
+    "confirm": "確認",
+    "enabled": "有効",
+    "disabled": "無効",
+    "install": "インストール",
+    "uninstall": "アンインストール",
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "success": "成功",
+    "actions": "操作"
+  }
+}

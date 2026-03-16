@@ -1,0 +1,160 @@
+{
+  "app": {
+    "title": "CC Notify"
+  },
+  "tabs": {
+    "channels": "通道",
+    "events": "事件",
+    "rules": "规则",
+    "history": "历史",
+    "settings": "设置"
+  },
+  "channels": {
+    "title": "通知通道",
+    "add": "添加通道",
+    "empty": "尚未配置通道",
+    "types": {
+      "native": "系统原生",
+      "slack": "Slack",
+      "discord": "Discord",
+      "teams": "Microsoft Teams",
+      "telegram": "Telegram",
+      "webhook": "HTTP Webhook",
+      "sound": "声音",
+      "voice": "语音 (macOS)",
+      "tray_badge": "托盘徽标"
+    },
+    "template": "模板",
+    "templates": {
+      "generic": "通用",
+      "feishu": "飞书"
+    },
+    "test": "测试",
+    "testSuccess": "测试通知已发送",
+    "testFailed": "测试失败：{{error}}",
+    "name": "通道名称",
+    "type": "通道类型",
+    "selectType": "选择通道类型",
+    "config": "配置",
+    "webhookUrl": "Webhook URL",
+    "botToken": "Bot Token",
+    "chatId": "Chat ID",
+    "createSuccess": "通道已创建",
+    "updateSuccess": "通道已更新",
+    "deleteSuccess": "通道已删除",
+    "deleteConfirm": "确定要删除此通道吗？",
+    "enabled": "已启用",
+    "disabled": "已禁用"
+  },
+  "events": {
+    "title": "事件类型与路由",
+    "empty": "未找到事件类型",
+    "categories": {
+      "claude_hook": "Claude Code Hooks",
+      "extended": "扩展事件",
+      "custom": "自定义规则"
+    },
+    "routing": "路由",
+    "noChannels": "无可用通道",
+    "updateSuccess": "事件已更新",
+    "routingUpdated": "路由已更新"
+  },
+  "rules": {
+    "title": "自定义规则",
+    "add": "添加规则",
+    "empty": "暂无自定义规则",
+    "types": {
+      "keyword": "关键词匹配",
+      "regex": "正则匹配",
+      "file_change": "文件变更",
+      "custom_event": "自定义事件"
+    },
+    "name": "规则名称",
+    "type": "规则类型",
+    "selectType": "选择规则类型",
+    "pattern": "匹配模式",
+    "eventType": "关联事件类型",
+    "selectEventType": "选择事件类型",
+    "createSuccess": "规则已创建",
+    "updateSuccess": "规则已更新",
+    "deleteSuccess": "规则已删除",
+    "deleteConfirm": "确定要删除此规则吗？"
+  },
+  "history": {
+    "title": "通知历史",
+    "empty": "尚无已发送的通知",
+    "clear": "清除历史",
+    "clearConfirm": "确定要清除所有历史记录吗？",
+    "clearSuccess": "历史已清除",
+    "loadMore": "加载更多",
+    "status": {
+      "sent": "已发送",
+      "failed": "失败",
+      "skipped": "已跳过"
+    },
+    "columns": {
+      "timestamp": "时间",
+      "event": "事件",
+      "channel": "通道",
+      "status": "状态",
+      "message": "消息"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "general": "通用",
+    "quietHours": "免打扰时段",
+    "quietHoursDesc": "在指定时间段内静音通知",
+    "quietHoursStart": "开始时间",
+    "quietHoursEnd": "结束时间",
+    "quietHoursDays": "生效日期",
+    "rateLimit": "频率限制",
+    "rateLimitDesc": "防止通知过于频繁",
+    "maxPerMinute": "每分钟最大数量",
+    "cooldownSeconds": "冷却时间（秒）",
+    "killSwitch": "总开关",
+    "killSwitchDesc": "全局禁用所有通知",
+    "killSwitchWarning": "这将停止所有通知的发送",
+    "sound": "声音",
+    "soundDesc": "发送通知时播放声音",
+    "volume": "音量",
+    "voice": "语音",
+    "voiceDesc": "朗读通知内容（仅限 macOS）",
+    "voiceName": "语音名称",
+    "hooks": "Hooks 集成",
+    "hooksDesc": "将 hooks 安装到 AI CLI 工具中",
+    "hooksInstalled": "已安装",
+    "hooksNotInstalled": "未安装",
+    "installSuccess": "Hook 安装成功",
+    "uninstallSuccess": "Hook 卸载成功",
+    "language": "语言",
+    "historyRetention": "历史保留天数",
+    "saveSuccess": "设置已保存",
+    "days": {
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六",
+      "sun": "周日"
+    }
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "enable": "启用",
+    "disable": "禁用",
+    "edit": "编辑",
+    "confirm": "确认",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "install": "安装",
+    "uninstall": "卸载",
+    "loading": "加载中...",
+    "error": "发生错误",
+    "success": "成功",
+    "actions": "操作"
+  }
+}

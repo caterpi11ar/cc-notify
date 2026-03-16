@@ -1,0 +1,27 @@
+[package]
+name = "cc-notify-cli"
+version = "0.1.0"
+description = "CLI for CC Notify - send notifications from AI CLI tool hooks"
+authors = ["CC-Notify Team"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.85.0"
+
+[[bin]]
+name = "cc-notify"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+notify-rust = "4"
+reqwest = { version = "0.12", features = ["rustls-tls", "json", "blocking"] }
+chrono = "0.4"
+dirs = "5.0"
+toml = "0.8"
+toml_edit = "0.22"
+tempfile = "3"
+uuid = { version = "1.11", features = ["v4"] }
+thiserror = "2.0"

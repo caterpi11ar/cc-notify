@@ -1,0 +1,33 @@
+import "@testing-library/jest-dom";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import { server } from "./msw/server";
+import { resetState } from "./msw/state";
+import "./msw/tauriMocks";
+
+beforeAll(async () => {
+  server.listen({ onUnhandledRequest: "warn" });
+  await i18n.use(initReactI18next).init({
+    lng: "en",
+    fallbackLng: "en",
+    resources: {
+      en: { translation: {} },
+    },
+    interpolation: {
+      escapeValue: false,
+    },
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  resetState();
+  server.resetHandlers();
+  vi.clearAllMocks();
+});
+
+afterAll(() => {
+  server.close();
+});

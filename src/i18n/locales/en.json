@@ -1,0 +1,160 @@
+{
+  "app": {
+    "title": "CC Notify"
+  },
+  "tabs": {
+    "channels": "Channels",
+    "events": "Events",
+    "rules": "Rules",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "channels": {
+    "title": "Notification Channels",
+    "add": "Add Channel",
+    "empty": "No channels configured yet",
+    "types": {
+      "native": "System Native",
+      "slack": "Slack",
+      "discord": "Discord",
+      "teams": "Microsoft Teams",
+      "telegram": "Telegram",
+      "webhook": "HTTP Webhook",
+      "sound": "Sound",
+      "voice": "Voice (macOS)",
+      "tray_badge": "Tray Badge"
+    },
+    "template": "Template",
+    "templates": {
+      "generic": "Generic",
+      "feishu": "Feishu (Lark)"
+    },
+    "test": "Test",
+    "testSuccess": "Test notification sent",
+    "testFailed": "Test failed: {{error}}",
+    "name": "Channel Name",
+    "type": "Channel Type",
+    "selectType": "Select channel type",
+    "config": "Configuration",
+    "webhookUrl": "Webhook URL",
+    "botToken": "Bot Token",
+    "chatId": "Chat ID",
+    "createSuccess": "Channel created",
+    "updateSuccess": "Channel updated",
+    "deleteSuccess": "Channel deleted",
+    "deleteConfirm": "Are you sure you want to delete this channel?",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "events": {
+    "title": "Event Types & Routing",
+    "empty": "No event types found",
+    "categories": {
+      "claude_hook": "Claude Code Hooks",
+      "extended": "Extended Events",
+      "custom": "Custom Rules"
+    },
+    "routing": "Routing",
+    "noChannels": "No channels available",
+    "updateSuccess": "Event updated",
+    "routingUpdated": "Routing updated"
+  },
+  "rules": {
+    "title": "Custom Rules",
+    "add": "Add Rule",
+    "empty": "No custom rules",
+    "types": {
+      "keyword": "Keyword Match",
+      "regex": "Regex Match",
+      "file_change": "File Change",
+      "custom_event": "Custom Event"
+    },
+    "name": "Rule Name",
+    "type": "Rule Type",
+    "selectType": "Select rule type",
+    "pattern": "Pattern",
+    "eventType": "Linked Event Type",
+    "selectEventType": "Select event type",
+    "createSuccess": "Rule created",
+    "updateSuccess": "Rule updated",
+    "deleteSuccess": "Rule deleted",
+    "deleteConfirm": "Are you sure you want to delete this rule?"
+  },
+  "history": {
+    "title": "Notification History",
+    "empty": "No notifications sent yet",
+    "clear": "Clear History",
+    "clearConfirm": "Are you sure you want to clear all history?",
+    "clearSuccess": "History cleared",
+    "loadMore": "Load More",
+    "status": {
+      "sent": "Sent",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "columns": {
+      "timestamp": "Timestamp",
+      "event": "Event",
+      "channel": "Channel",
+      "status": "Status",
+      "message": "Message"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "quietHours": "Quiet Hours",
+    "quietHoursDesc": "Suppress notifications during specified hours",
+    "quietHoursStart": "Start Time",
+    "quietHoursEnd": "End Time",
+    "quietHoursDays": "Active Days",
+    "rateLimit": "Rate Limiting",
+    "rateLimitDesc": "Prevent notification flooding",
+    "maxPerMinute": "Max per Minute",
+    "cooldownSeconds": "Cooldown (seconds)",
+    "killSwitch": "Kill Switch",
+    "killSwitchDesc": "Disable all notifications globally",
+    "killSwitchWarning": "This will stop ALL notifications from being sent",
+    "sound": "Sound",
+    "soundDesc": "Play a sound when notifications are sent",
+    "volume": "Volume",
+    "voice": "Voice",
+    "voiceDesc": "Read notifications aloud (macOS only)",
+    "voiceName": "Voice Name",
+    "hooks": "Hooks Integration",
+    "hooksDesc": "Install hooks into AI CLI tools",
+    "hooksInstalled": "Installed",
+    "hooksNotInstalled": "Not Installed",
+    "installSuccess": "Hook installed successfully",
+    "uninstallSuccess": "Hook uninstalled successfully",
+    "language": "Language",
+    "historyRetention": "History Retention (days)",
+    "saveSuccess": "Settings saved",
+    "days": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "install": "Install",
+    "uninstall": "Uninstall",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "actions": "Actions"
+  }
+}
