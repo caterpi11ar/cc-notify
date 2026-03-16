@@ -108,6 +108,11 @@ fn get_kill_switch_path() -> PathBuf {
 }
 
 fn main() {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = notify_rust::set_application(notify::BUNDLE_ID);
+    }
+
     let cli = Cli::parse();
 
     let result = match cli.command {

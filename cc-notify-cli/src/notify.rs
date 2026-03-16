@@ -1,6 +1,10 @@
 use crate::db;
 use std::path::Path;
 
+/// Bundle identifier for CC Notify app.
+/// Must match `identifier` in src-tauri/tauri.conf.json.
+pub const BUNDLE_ID: &str = "com.ccnotify.desktop";
+
 /// Send a notification through the cc-notify pipeline
 pub fn send_notification(
     db_path: &Path,
