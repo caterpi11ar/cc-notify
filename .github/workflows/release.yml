@@ -85,6 +85,21 @@ jobs:
           RUST_TARGET: ${{ matrix.rust-target }}
         run: pnpm tauri build --target ${{ matrix.rust-target }}
 
+      - name: Ad-hoc sign and repackage macOS app
+        if: runner.os == 'macOS'
+        run: |
+          APP_DIR="src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos"
+          APP_PATH=$(find "$APP_DIR" -name "*.app" -maxdepth 1)
+          codesign --force --deep --sign - "$APP_PATH"
+
+          DMG_DIR="src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg"
+          DMG_PATH=$(find "$DMG_DIR" -name "*.dmg" -maxdepth 1)
+          APP_NAME=$(basename "$APP_PATH")
+          DMG_NAME=$(basename "$DMG_PATH")
+
+          rm "$DMG_PATH"
+          hdiutil create -volname "$APP_NAME" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_DIR/$DMG_NAME"
+
       - name: Upload artifacts
         env:
           GH_TOKEN: ${{ github.token }}
