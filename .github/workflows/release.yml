@@ -31,23 +31,15 @@ jobs:
         include:
           - os: macos-latest
             rust-target: aarch64-apple-darwin
-            cli-binary: cc-notify
-            cli-artifact: cc-notify-cli-aarch64-apple-darwin
             desktop-glob: "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg"
           - os: macos-latest
             rust-target: x86_64-apple-darwin
-            cli-binary: cc-notify
-            cli-artifact: cc-notify-cli-x86_64-apple-darwin
             desktop-glob: "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg"
           - os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
-            cli-binary: cc-notify
-            cli-artifact: cc-notify-cli-x86_64-unknown-linux-gnu
             desktop-glob: "src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb"
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
-            cli-binary: cc-notify.exe
-            cli-artifact: cc-notify-cli-x86_64-pc-windows-msvc.exe
             desktop-glob: "src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi"
 
     runs-on: ${{ matrix.os }}
@@ -71,9 +63,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: |
-            src-tauri -> target
-            cc-notify-cli -> target
+          workspaces: src-tauri -> target
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
@@ -91,16 +81,11 @@ jobs:
       - name: Build Tauri app
         run: pnpm tauri build --target ${{ matrix.rust-target }}
 
-      - name: Build CLI
-        run: cargo build --manifest-path cc-notify-cli/Cargo.toml --release --target ${{ matrix.rust-target }}
-
       - name: Upload artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
-        run: |
-          cp "cc-notify-cli/target/${{ matrix.rust-target }}/release/${{ matrix.cli-binary }}" "${{ matrix.cli-artifact }}"
-          gh release upload "${{ github.ref_name }}" ${{ matrix.desktop-glob }} "${{ matrix.cli-artifact }}"
+        run: gh release upload "${{ github.ref_name }}" ${{ matrix.desktop-glob }}
 
   publish-release:
     needs: [create-release, build]
