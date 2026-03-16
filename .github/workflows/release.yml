@@ -11,13 +11,10 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create.outputs.id }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Create draft release
-        id: create
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -25,8 +22,6 @@ jobs:
             --draft \
             --title "${{ github.ref_name }}" \
             --generate-notes
-          RELEASE_ID=$(gh release view "${{ github.ref_name }}" --json databaseId --jq '.databaseId')
-          echo "id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
 
   build:
     needs: create-release
@@ -38,18 +33,22 @@ jobs:
             rust-target: aarch64-apple-darwin
             cli-binary: cc-notify
             cli-artifact: cc-notify-cli-aarch64-apple-darwin
+            desktop-glob: "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg"
           - os: macos-latest
             rust-target: x86_64-apple-darwin
             cli-binary: cc-notify
             cli-artifact: cc-notify-cli-x86_64-apple-darwin
+            desktop-glob: "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg"
           - os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
             cli-binary: cc-notify
             cli-artifact: cc-notify-cli-x86_64-unknown-linux-gnu
+            desktop-glob: "src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb"
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             cli-binary: cc-notify.exe
             cli-artifact: cc-notify-cli-x86_64-pc-windows-msvc.exe
+            desktop-glob: "src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi"
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -90,22 +89,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: --target ${{ matrix.rust-target }}
+        run: pnpm tauri build --target ${{ matrix.rust-target }}
 
       - name: Build CLI
         run: cargo build --manifest-path cc-notify-cli/Cargo.toml --release --target ${{ matrix.rust-target }}
 
-      - name: Upload CLI binary
+      - name: Upload artifacts
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           cp "cc-notify-cli/target/${{ matrix.rust-target }}/release/${{ matrix.cli-binary }}" "${{ matrix.cli-artifact }}"
-          gh release upload "${{ github.ref_name }}" "${{ matrix.cli-artifact }}"
+          gh release upload "${{ github.ref_name }}" ${{ matrix.desktop-glob }} "${{ matrix.cli-artifact }}"
 
   publish-release:
     needs: [create-release, build]
