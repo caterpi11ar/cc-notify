@@ -169,6 +169,19 @@ impl Database {
             .map_err(|e| AppError::Database(format!("Migration v3 failed: {e}")))?;
         }
 
+        // v4: Disable noisy event types by default
+        if current < 4 {
+            conn.execute(
+                "UPDATE event_types SET enabled = 0
+                 WHERE id IN ('subagent_stop','session_start','session_end',
+                              'notification.auth_success',
+                              'long_running','error','token_threshold','cost_threshold')
+                   AND is_builtin = 1",
+                [],
+            )
+            .map_err(|e| AppError::Database(format!("Migration v4 failed: {e}")))?;
+        }
+
         Self::set_user_version(&conn, SCHEMA_VERSION)?;
         Ok(())
     }
@@ -189,35 +202,37 @@ impl Database {
             return Ok(());
         }
 
-        let builtin_events = vec![
-            ("stop", "Task Complete", "claude_hook"),
-            ("notification.idle_prompt", "Idle Prompt", "claude_hook"),
+        let builtin_events: Vec<(&str, &str, &str, bool)> = vec![
+            ("stop", "Task Complete", "claude_hook", true),
+            ("notification.idle_prompt", "Idle Prompt", "claude_hook", true),
             (
                 "notification.permission_prompt",
                 "Permission Request",
                 "claude_hook",
+                true,
             ),
-            ("notification.auth_success", "Auth Success", "claude_hook"),
+            ("notification.auth_success", "Auth Success", "claude_hook", false),
             (
                 "notification.elicitation_dialog",
                 "MCP Input",
                 "claude_hook",
+                true,
             ),
-            ("subagent_stop", "Subagent Stop", "claude_hook"),
-            ("session_start", "Session Start", "claude_hook"),
-            ("session_end", "Session End", "claude_hook"),
-            ("long_running", "Long Running", "extended"),
-            ("error", "Error", "extended"),
-            ("token_threshold", "Token Threshold", "extended"),
-            ("cost_threshold", "Cost Threshold", "extended"),
+            ("subagent_stop", "Subagent Stop", "claude_hook", false),
+            ("session_start", "Session Start", "claude_hook", false),
+            ("session_end", "Session End", "claude_hook", false),
+            ("long_running", "Long Running", "extended", false),
+            ("error", "Error", "extended", false),
+            ("token_threshold", "Token Threshold", "extended", false),
+            ("cost_threshold", "Cost Threshold", "extended", false),
         ];
 
         let mut stmt = conn
-            .prepare("INSERT OR IGNORE INTO event_types (id, name, category, is_builtin, enabled) VALUES (?1, ?2, ?3, 1, 1)")
+            .prepare("INSERT OR IGNORE INTO event_types (id, name, category, is_builtin, enabled) VALUES (?1, ?2, ?3, 1, ?4)")
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        for (id, name, category) in builtin_events {
-            stmt.execute(rusqlite::params![id, name, category])
+        for (id, name, category, enabled) in &builtin_events {
+            stmt.execute(rusqlite::params![id, name, category, enabled])
                 .map_err(|e| AppError::Database(e.to_string()))?;
         }
 

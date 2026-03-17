@@ -5,7 +5,7 @@
   "identifier": "com.ccnotify.desktop",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:3001",
+    "devUrl": "http://localhost:1111",
     "beforeDevCommand": "pnpm run build:cli && pnpm run dev:renderer",
     "beforeBuildCommand": "pnpm run build:all"
   },
