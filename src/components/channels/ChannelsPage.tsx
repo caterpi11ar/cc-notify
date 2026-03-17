@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -7,6 +7,8 @@ import {
   Zap,
   Loader2,
   Pencil,
+  Power,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +43,8 @@ import {
   useUpdateChannel,
   useDeleteChannel,
   useTestChannel,
+  useSettingsQuery,
+  useSetSetting,
 } from "@/lib/query";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import type { Channel } from "@/types";
@@ -239,6 +243,22 @@ const emptyForm: ChannelFormState = {
 export function ChannelsPage() {
   const { t } = useTranslation();
 
+  // Kill switch state
+  const { data: settings } = useSettingsQuery();
+  const setSetting = useSetSetting();
+  const [killSwitch, setKillSwitch] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setKillSwitch(settings["kill_switch"] === "true");
+    }
+  }, [settings]);
+
+  const handleKillSwitchToggle = (checked: boolean) => {
+    setKillSwitch(checked);
+    setSetting.mutate({ key: "kill_switch", value: String(checked) });
+  };
+
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
@@ -416,6 +436,37 @@ export function ChannelsPage() {
           <Plus className="h-4 w-4" />
           {t("channels.add")}
         </Button>
+      </div>
+
+      {/* Kill Switch */}
+      <div
+        className={`flex items-center justify-between rounded-lg border p-3 ${
+          killSwitch ? "border-red-500/50 bg-red-500/5" : ""
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <Power
+            className={`h-4 w-4 ${killSwitch ? "text-red-500" : "text-muted-foreground"}`}
+          />
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-sm font-medium ${killSwitch ? "text-red-600" : ""}`}
+            >
+              {t("settings.killSwitch")}
+            </span>
+            {killSwitch && (
+              <span className="flex items-center gap-1 text-xs text-red-600">
+                <AlertTriangle className="h-3 w-3" />
+                {t("settings.killSwitchWarning")}
+              </span>
+            )}
+          </div>
+        </div>
+        <Switch
+          checked={killSwitch}
+          onCheckedChange={handleKillSwitchToggle}
+          className={killSwitch ? "data-[state=checked]:bg-red-500" : ""}
+        />
       </div>
 
       {/* Channel list */}

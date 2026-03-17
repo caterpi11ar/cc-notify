@@ -6,14 +6,18 @@ import {
   Globe,
   Clock,
   Gauge,
-  Power,
   Volume2,
   Mic,
   Plug,
-  AlertTriangle,
+  Info,
+  ExternalLink,
+  Download,
+  RefreshCw,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -76,7 +80,6 @@ export function SettingsPage() {
   const [quietHoursDays, setQuietHoursDays] = useState<string[]>([]);
   const [maxPerMinute, setMaxPerMinute] = useState("10");
   const [cooldownSeconds, setCooldownSeconds] = useState("5");
-  const [killSwitch, setKillSwitch] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [volume, setVolume] = useState("80");
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -116,7 +119,6 @@ export function SettingsPage() {
     if (settings["rate_limit_cooldown_seconds"]) {
       setCooldownSeconds(settings["rate_limit_cooldown_seconds"]);
     }
-    setKillSwitch(settings["kill_switch"] === "true");
     setSoundEnabled(settings["sound_enabled"] === "true");
     if (settings["sound_volume"]) {
       setVolume(settings["sound_volume"]);
@@ -188,12 +190,6 @@ export function SettingsPage() {
     saveSetting("rate_limit_cooldown_seconds", cooldownSeconds);
   };
 
-  // --- Kill Switch ---
-  const handleKillSwitchToggle = (checked: boolean) => {
-    setKillSwitch(checked);
-    saveSetting("kill_switch", String(checked));
-  };
-
   // --- Sound ---
   const handleSoundToggle = (checked: boolean) => {
     setSoundEnabled(checked);
@@ -231,6 +227,57 @@ export function SettingsPage() {
         toast.success(t("settings.uninstallSuccess"));
       },
     });
+  };
+
+  // --- About ---
+  const [appVersion, setAppVersion] = useState("");
+  const [updateStatus, setUpdateStatus] = useState<
+    "idle" | "checking" | "up-to-date" | "available" | "error"
+  >("idle");
+  const [latestVersion, setLatestVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
+  const handleCheckUpdate = async () => {
+    setUpdateStatus("checking");
+    try {
+      const res = await fetch(
+        "https://api.github.com/repos/caterpi11ar/cc-notify/releases/latest",
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const remote = (data.tag_name as string).replace(/^v/, "");
+      setLatestVersion(remote);
+
+      const isNewer = (a: string, b: string) => {
+        const pa = a.split(".").map(Number);
+        const pb = b.split(".").map(Number);
+        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+          const va = pa[i] ?? 0;
+          const vb = pb[i] ?? 0;
+          if (va > vb) return true;
+          if (va < vb) return false;
+        }
+        return false;
+      };
+
+      setUpdateStatus(isNewer(remote, appVersion) ? "available" : "up-to-date");
+    } catch {
+      setUpdateStatus("error");
+      toast.error(t("settings.checkFailed"));
+    }
+  };
+
+  const handleOpenRelease = () => {
+    openUrl(
+      `https://github.com/caterpi11ar/cc-notify/releases/tag/v${latestVersion}`,
+    );
+  };
+
+  const handleOpenGithub = () => {
+    openUrl("https://github.com/caterpi11ar/cc-notify");
   };
 
   if (settingsLoading) {
@@ -389,46 +436,6 @@ export function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Kill Switch Section */}
-          <Card
-            className={
-              killSwitch ? "border-red-500/50 bg-red-500/5" : ""
-            }
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Power
-                    className={`h-4 w-4 ${killSwitch ? "text-red-500" : "text-muted-foreground"}`}
-                  />
-                  <CardTitle
-                    className={`text-base ${killSwitch ? "text-red-600" : ""}`}
-                  >
-                    {t("settings.killSwitch")}
-                  </CardTitle>
-                </div>
-                <Switch
-                  checked={killSwitch}
-                  onCheckedChange={handleKillSwitchToggle}
-                  className={
-                    killSwitch
-                      ? "data-[state=checked]:bg-red-500"
-                      : ""
-                  }
-                />
-              </div>
-              <CardDescription>{t("settings.killSwitchDesc")}</CardDescription>
-            </CardHeader>
-            {killSwitch && (
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-red-600">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  <span>{t("settings.killSwitchWarning")}</span>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
           {/* Sound Section */}
           <Card>
             <CardHeader className="pb-3">
@@ -577,6 +584,69 @@ export function SettingsPage() {
                   );
                 })
               )}
+            </CardContent>
+          </Card>
+
+          {/* About Section */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">
+                  {t("settings.about")}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  CC Notify{appVersion ? ` v${appVersion}` : ""}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCheckUpdate}
+                  disabled={updateStatus === "checking"}
+                >
+                  {updateStatus === "checking" ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                  {updateStatus === "checking"
+                    ? t("settings.checking")
+                    : t("settings.checkUpdate")}
+                </Button>
+              </div>
+
+              {updateStatus === "up-to-date" && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{t("settings.upToDate")}</span>
+                </div>
+              )}
+
+              {updateStatus === "available" && (
+                <div className="flex items-center justify-between rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+                  <span className="text-sm">
+                    {t("settings.newVersion", { version: latestVersion })}
+                  </span>
+                  <Button size="sm" onClick={handleOpenRelease}>
+                    <Download className="h-3 w-3" />
+                    {t("settings.download")}
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleOpenGithub}
+              >
+                <ExternalLink className="h-3 w-3" />
+                {t("settings.viewOnGithub")}
+              </Button>
             </CardContent>
           </Card>
         </div>
