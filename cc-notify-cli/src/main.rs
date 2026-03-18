@@ -54,6 +54,10 @@ enum Commands {
         /// Silent mode - suppress CLI output
         #[arg(long)]
         silent: bool,
+
+        /// Send to a specific channel by ID (bypass routing table)
+        #[arg(long)]
+        channel_id: Option<String>,
     },
 
     /// Manage hooks integration with AI CLI tools
@@ -165,6 +169,7 @@ fn main() {
             tokens,
             metadata,
             silent,
+            channel_id,
         } => {
             let stdin = read_stdin_hook_input();
 
@@ -197,6 +202,7 @@ fn main() {
                 agent_type: stdin.agent_type,
                 title: stdin.title,
                 stdin_message: stdin.message,
+                channel_id,
             };
 
             notify::send_notification(&get_db_path(), &ctx)
@@ -267,6 +273,7 @@ fn main() {
                 agent_type: None,
                 title: None,
                 stdin_message: None,
+                channel_id: None,
             };
             notify::send_notification(&get_db_path(), &ctx)
         }

@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::store::AppState;
-use crate::models::Channel;
+use crate::models::{Channel, SendResult};
 
 #[tauri::command]
 pub fn get_channels(state: State<'_, AppState>) -> Result<Vec<Channel>, String> {
@@ -62,22 +62,39 @@ pub fn delete_channel(state: State<'_, AppState>, id: String) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn test_channel(
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
     id: String,
-) -> Result<crate::models::SendResult, String> {
-    let channel = state
-        .db
-        .get_channel(&id)
-        .map_err(|e| e.to_string())?
-        .ok_or("Channel not found")?;
+) -> Result<SendResult, String> {
+    let cli_path = dirs::home_dir()
+        .ok_or("Cannot determine home directory")?
+        .join(".cc-notify/bin/cc-notify");
 
-    let adapter = state
-        .registry
-        .get(&channel.channel_type)
-        .ok_or_else(|| format!("Unsupported channel type: {}", channel.channel_type))?;
+    if !cli_path.exists() {
+        return Err("CLI binary not found at ~/.cc-notify/bin/cc-notify".to_string());
+    }
 
-    adapter
-        .test(&channel.config)
+    let output = tokio::process::Command::new(&cli_path)
+        .args([
+            "send",
+            "--event", "test",
+            "--tool", "cc-notify",
+            "--message", "Test notification from CC Notify",
+            "--channel-id", &id,
+        ])
+        .output()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| format!("Failed to run CLI: {e}"))?;
+
+    let success = output.status.success();
+    let message = if success {
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
+    } else {
+        String::from_utf8_lossy(&output.stderr).trim().to_string()
+    };
+
+    Ok(SendResult {
+        success,
+        channel_type: String::new(),
+        message: if message.is_empty() { None } else { Some(message) },
+    })
 }

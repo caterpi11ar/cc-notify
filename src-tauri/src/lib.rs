@@ -1,4 +1,3 @@
-mod channels;
 mod cli_installer;
 mod commands;
 mod config;
@@ -7,7 +6,6 @@ mod error;
 mod hooks;
 mod models;
 mod presets;
-mod services;
 mod store;
 mod tray;
 
@@ -35,7 +33,7 @@ pub fn run() {
                 e.to_string()
             })?;
             let db = Arc::new(db);
-            let app_state = AppState::new(db, app.handle().clone());
+            let app_state = AppState::new(db);
             app.manage(app_state);
 
             // Create system tray
@@ -85,9 +83,6 @@ pub fn run() {
             commands::settings::get_setting,
             commands::settings::set_setting,
             commands::settings::delete_setting,
-            // Notification commands
-            commands::notification::send_notification,
-            commands::notification::test_notification,
             // Hooks commands
             commands::hooks::get_hooks_status,
             commands::hooks::install_hook,

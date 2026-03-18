@@ -28,6 +28,8 @@ pub struct NotificationContext {
     /// The `message` field from stdin JSON (kept separate from CLI --message).
     /// Used as notification body text for Notification events.
     pub stdin_message: Option<String>,
+    /// Send to a specific channel by ID, bypassing the routing table.
+    pub channel_id: Option<String>,
 }
 
 // ────────────────────────────────────────────────────────────
@@ -284,6 +286,56 @@ pub fn send_notification(db_path: &Path, ctx: &NotificationContext) -> Result<()
     // Try to use database for routing, fall back to native notification
     if db_path.exists() {
         if let Ok(conn) = db::open_db_rw(db_path) {
+            // If --channel-id is specified, send directly to that channel (bypass routing)
+            if let Some(ref target_id) = ctx.channel_id {
+                // Look up channel by ID regardless of enabled state (explicit targeting)
+                let channel: Option<(String, String, String)> = conn
+                    .query_row(
+                        "SELECT id, channel_type, config FROM channels WHERE id = ?1",
+                        rusqlite::params![target_id],
+                        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                    )
+                    .ok();
+
+                let (_id, channel_type, config_str) = channel
+                    .ok_or_else(|| format!("Channel not found: {}", target_id))?;
+
+                let config: serde_json::Value =
+                    serde_json::from_str(&config_str).unwrap_or_default();
+                let result = send_to_channel(
+                    &channel_type,
+                    &config,
+                    &event_type_id,
+                    &message_text,
+                    ctx,
+                );
+
+                let (status, error_msg) = match &result {
+                    Ok(_) => ("sent", None),
+                    Err(e) => ("failed", Some(e.as_str())),
+                };
+
+                db::record_history(
+                    &conn,
+                    &event_type_id,
+                    target_id,
+                    status,
+                    &message_text,
+                    error_msg,
+                    &ctx.metadata,
+                )
+                .ok();
+
+                if !ctx.silent {
+                    match &result {
+                        Ok(_) => println!("Sent to {} ({})", target_id, channel_type),
+                        Err(e) => eprintln!("Failed to send to {}: {}", target_id, e),
+                    }
+                }
+
+                return result.map(|_| ());
+            }
+
             // Check if event type is enabled
             let enabled: bool = conn
                 .query_row(
