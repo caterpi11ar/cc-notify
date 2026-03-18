@@ -24,6 +24,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(|app| {
             // Auto-install CLI binary to ~/.cc-notify/bin/
             cli_installer::install_cli(app);
@@ -88,6 +95,24 @@ pub fn run() {
             commands::hooks::install_hook,
             commands::hooks::uninstall_hook,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| match event {
+            tauri::RunEvent::WindowEvent {
+                label,
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                api.prevent_close();
+                if let Some(window) = app_handle.get_webview_window(&label) {
+                    let _ = window.hide();
+                }
+            }
+            tauri::RunEvent::ExitRequested { code, api, .. } => {
+                if code.is_none() {
+                    api.prevent_exit();
+                }
+            }
+            _ => {}
+        });
 }
