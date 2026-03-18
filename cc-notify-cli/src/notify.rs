@@ -437,8 +437,7 @@ fn send_to_channel(
             send_webhook(&config, event, message, ctx)
         }
         "webhook" => send_webhook(config, event, message, ctx),
-        "sound" => play_sound(config),
-        "voice" => speak_notification(config, event, message),
+        "voice" => play_notification_sound(config),
         _ => Err(format!("Unknown channel type: {channel_type}")),
     }
 }
@@ -790,40 +789,47 @@ fn send_generic_webhook(
 }
 
 // ────────────────────────────────────────────────────────────
-// Sound + Voice (unchanged)
+// Notification Sound
 // ────────────────────────────────────────────────────────────
 
-/// Play a sound notification
-fn play_sound(config: &serde_json::Value) -> Result<(), String> {
-    // Treat "default" and "" the same as None (use OS default sound)
+/// Play a notification sound file.
+/// Reads `config["sound_file"]` (default "default.mp3") and `config["volume"]`.
+/// Relative paths are resolved under `~/.cc-notify/sounds/`.
+fn play_notification_sound(config: &serde_json::Value) -> Result<(), String> {
     let sound_file = config["sound_file"]
         .as_str()
-        .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("default"));
+        .filter(|s| !s.is_empty())
+        .unwrap_or("default.mp3");
 
     let volume = config["volume"].as_f64();
 
+    // Resolve path: absolute paths used as-is, otherwise look in ~/.cc-notify/sounds/
+    let file_path = if Path::new(sound_file).is_absolute() {
+        std::path::PathBuf::from(sound_file)
+    } else {
+        dirs::home_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join(".cc-notify")
+            .join("sounds")
+            .join(sound_file)
+    };
+
+    if !file_path.exists() {
+        return Err(format!(
+            "Sound file not found: {}",
+            file_path.display()
+        ));
+    }
+
+    let file = file_path.to_string_lossy();
+
     #[cfg(target_os = "macos")]
     {
-        let resolved: String;
-        let file = match sound_file {
-            Some(name) if !name.contains('/') && !name.contains('.') => {
-                // Short name like "Glass", "Ping" — resolve to system sound
-                let system_path = format!("/System/Library/Sounds/{name}.aiff");
-                if std::path::Path::new(&system_path).exists() {
-                    resolved = system_path;
-                    &resolved
-                } else {
-                    name
-                }
-            }
-            Some(path) => path,
-            None => "/System/Library/Sounds/Glass.aiff",
-        };
         let mut cmd = std::process::Command::new("afplay");
         if let Some(v) = volume {
             cmd.args(["-v", &v.to_string()]);
         }
-        cmd.arg(file)
+        cmd.arg(file.as_ref())
             .spawn()
             .map_err(|e| format!("Failed to play sound: {e}"))?;
         return Ok(());
@@ -831,26 +837,23 @@ fn play_sound(config: &serde_json::Value) -> Result<(), String> {
 
     #[cfg(target_os = "linux")]
     {
-        let file = sound_file.unwrap_or("/usr/share/sounds/freedesktop/stereo/complete.oga");
-        // Scale volume from 0.0–1.0 to paplay's 0–65536 range
         let pa_volume = volume.map(|v| ((v * 65536.0) as u32).to_string());
-        // Try paplay -> aplay -> ffplay
         let mut cmd = std::process::Command::new("paplay");
         if let Some(ref vol) = pa_volume {
             cmd.args(["--volume", vol]);
         }
-        if cmd.arg(file).spawn().is_ok() {
+        if cmd.arg(file.as_ref()).spawn().is_ok() {
             return Ok(());
         }
         if std::process::Command::new("aplay")
-            .arg(file)
+            .arg(file.as_ref())
             .spawn()
             .is_ok()
         {
             return Ok(());
         }
         std::process::Command::new("ffplay")
-            .args(["-nodisp", "-autoexit", file])
+            .args(["-nodisp", "-autoexit", file.as_ref()])
             .spawn()
             .map_err(|e| format!("Failed to play sound: {e}"))?;
         return Ok(());
@@ -858,7 +861,6 @@ fn play_sound(config: &serde_json::Value) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let file = sound_file.unwrap_or("C:\\Windows\\Media\\chimes.wav");
         std::process::Command::new("powershell")
             .args([
                 "-Command",
@@ -874,88 +876,4 @@ fn play_sound(config: &serde_json::Value) -> Result<(), String> {
 
     #[allow(unreachable_code)]
     Err("Unsupported platform for sound playback".to_string())
-}
-
-/// Speak a notification for macOS voice channel.
-/// In voice_pack mode: event file -> default file -> no playback.
-fn speak_notification(config: &serde_json::Value, event: &str, message: &str) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        let mode = config["mode"].as_str().unwrap_or("tts");
-        if mode != "tts" && mode != "voice_pack" {
-            return Err(format!(
-                "Invalid voice mode: {mode} (expected 'tts' or 'voice_pack')"
-            ));
-        }
-
-        let voice = config["voice"].as_str().unwrap_or("Samantha");
-        let rate = json_rate_to_u64(&config["rate"]).unwrap_or(200);
-        if mode == "voice_pack" {
-            let dir = config["voice_pack_dir"].as_str().unwrap_or("");
-            if dir.is_empty() {
-                return Err("voice_pack_dir is required when mode=voice_pack".to_string());
-            }
-            let dir_path = Path::new(dir);
-            if !dir_path.is_dir() {
-                return Err(format!("Voice pack directory not found: {dir}"));
-            }
-            std::fs::read_dir(dir_path)
-                .map_err(|e| format!("Voice pack directory is not readable ({dir}): {e}"))?;
-            let path = find_voice_pack_file(dir, event).or_else(|| find_voice_pack_file(dir, "default"));
-            if let Some(audio_file) = path {
-                std::process::Command::new("afplay")
-                    .arg(audio_file)
-                    .spawn()
-                    .map_err(|e| format!("Failed to play voice pack file: {e}"))?;
-            }
-            return Ok(());
-        }
-
-        std::process::Command::new("say")
-            .args(["-v", voice, "-r", &rate.to_string(), &format!("CC Notify: {message}")])
-            .spawn()
-            .map_err(|e| format!("Failed to speak notification: {e}"))?;
-        return Ok(());
-    }
-
-    #[allow(unreachable_code)]
-    Err("Voice notifications are only supported on macOS".to_string())
-}
-
-fn find_voice_pack_file(dir: &str, event_id: &str) -> Option<String> {
-    let exts = ["wav", "aiff", "m4a", "mp3"];
-    for ext in exts {
-        let path = Path::new(dir).join(format!("{event_id}.{ext}"));
-        if path.is_file() {
-            return Some(path.to_string_lossy().to_string());
-        }
-    }
-    None
-}
-
-fn json_rate_to_u64(value: &serde_json::Value) -> Option<u64> {
-    value
-        .as_u64()
-        .or_else(|| value.as_f64().map(|v| v.max(0.0) as u64))
-        .or_else(|| value.as_str().and_then(|v| v.parse::<u64>().ok()))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::find_voice_pack_file;
-    use std::fs;
-    use tempfile::tempdir;
-
-    #[test]
-    fn finds_mock_voice_file_by_event_id() {
-        let dir = tempdir().expect("create temp dir");
-        let base = dir.path();
-        fs::write(base.join("notification.idle_prompt.m4a"), b"mock-audio").expect("write mock file");
-
-        let hit = find_voice_pack_file(base.to_str().unwrap_or_default(), "notification.idle_prompt");
-        assert!(hit.is_some());
-        assert!(hit
-            .unwrap()
-            .ends_with("notification.idle_prompt.m4a"));
-    }
 }

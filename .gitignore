@@ -24,7 +24,8 @@ Thumbs.db
 # Tauri
 src-tauri/gen/schemas/
 src-tauri/WixTools/
-src-tauri/resources/
+src-tauri/resources/*
+!src-tauri/resources/sounds/
 
 # Test
 coverage/

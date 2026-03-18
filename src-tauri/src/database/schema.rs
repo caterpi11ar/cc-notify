@@ -182,6 +182,31 @@ impl Database {
             .map_err(|e| AppError::Database(format!("Migration v4 failed: {e}")))?;
         }
 
+        // v5: Remove sound channel type, simplify voice to notification sound
+        if current < 5 {
+            // Delete all sound channels (routing cleaned up by ON DELETE CASCADE)
+            conn.execute(
+                "DELETE FROM channels WHERE channel_type = 'sound'",
+                [],
+            )
+            .map_err(|e| AppError::Database(format!("Migration v5 (delete sound channels) failed: {e}")))?;
+
+            // Update voice channels to simplified config
+            conn.execute(
+                "UPDATE channels SET config = '{\"sound_file\": \"default.mp3\", \"volume\": 0.8}'
+                 WHERE channel_type = 'voice'",
+                [],
+            )
+            .map_err(|e| AppError::Database(format!("Migration v5 (update voice config) failed: {e}")))?;
+
+            // Remove obsolete settings
+            conn.execute(
+                "DELETE FROM settings WHERE key IN ('sound_enabled', 'sound_volume', 'voice_enabled', 'voice_name')",
+                [],
+            )
+            .map_err(|e| AppError::Database(format!("Migration v5 (delete settings) failed: {e}")))?;
+        }
+
         Self::set_user_version(&conn, SCHEMA_VERSION)?;
         Ok(())
     }
@@ -301,10 +326,6 @@ impl Database {
             ("rate_limit_per_minute", "10"),
             ("rate_limit_cooldown_seconds", "10"),
             ("kill_switch", "false"),
-            ("sound_enabled", "true"),
-            ("sound_volume", "80"),
-            ("voice_enabled", "false"),
-            ("voice_name", "Samantha"),
             ("language", "system"),
             ("history_retention_days", "30"),
         ];

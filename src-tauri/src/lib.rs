@@ -36,6 +36,9 @@ pub fn run() {
             // Auto-install CLI binary to ~/.cc-notify/bin/
             cli_installer::install_cli(app);
 
+            // Auto-install sound files to ~/.cc-notify/sounds/
+            cli_installer::install_sounds(app);
+
             let db = Database::init().map_err(|e| {
                 log::error!("Database init failed: {e}");
                 e.to_string()

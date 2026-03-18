@@ -43,6 +43,11 @@ pub fn get_logs_dir() -> PathBuf {
     get_app_config_dir().join("logs")
 }
 
+/// Get cc-notify sounds directory (~/.cc-notify/sounds)
+pub fn get_sounds_dir() -> PathBuf {
+    get_app_config_dir().join("sounds")
+}
+
 /// Get Claude Code settings path
 pub fn get_claude_settings_path() -> PathBuf {
     get_home_dir().join(".claude").join("settings.json")

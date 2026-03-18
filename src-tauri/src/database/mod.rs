@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::sync::Mutex;
 
 /// Current schema version
-pub(crate) const SCHEMA_VERSION: i32 = 4;
+pub(crate) const SCHEMA_VERSION: i32 = 5;
 
 /// Safely serialize to JSON
 pub(crate) fn to_json_string<T: Serialize>(value: &T) -> Result<String, AppError> {

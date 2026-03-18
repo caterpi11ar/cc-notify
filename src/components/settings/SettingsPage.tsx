@@ -6,8 +6,6 @@ import {
   Globe,
   Clock,
   Gauge,
-  Volume2,
-  Mic,
   Plug,
   Info,
   ExternalLink,
@@ -80,10 +78,6 @@ export function SettingsPage() {
   const [quietHoursDays, setQuietHoursDays] = useState<string[]>([]);
   const [maxPerMinute, setMaxPerMinute] = useState("10");
   const [cooldownSeconds, setCooldownSeconds] = useState("5");
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [volume, setVolume] = useState("80");
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [voiceName, setVoiceName] = useState("");
 
   // Sync local state from fetched settings
   useEffect(() => {
@@ -118,14 +112,6 @@ export function SettingsPage() {
     }
     if (settings["rate_limit_cooldown_seconds"]) {
       setCooldownSeconds(settings["rate_limit_cooldown_seconds"]);
-    }
-    setSoundEnabled(settings["sound_enabled"] === "true");
-    if (settings["sound_volume"]) {
-      setVolume(settings["sound_volume"]);
-    }
-    setVoiceEnabled(settings["voice_enabled"] === "true");
-    if (settings["voice_name"]) {
-      setVoiceName(settings["voice_name"]);
     }
   }, [settings]);
 
@@ -188,28 +174,6 @@ export function SettingsPage() {
 
   const handleCooldownBlur = () => {
     saveSetting("rate_limit_cooldown_seconds", cooldownSeconds);
-  };
-
-  // --- Sound ---
-  const handleSoundToggle = (checked: boolean) => {
-    setSoundEnabled(checked);
-    saveSetting("sound_enabled", String(checked));
-  };
-
-  const handleVolumeBlur = () => {
-    const clamped = Math.max(0, Math.min(100, Number(volume) || 0));
-    setVolume(String(clamped));
-    saveSetting("sound_volume", String(clamped));
-  };
-
-  // --- Voice ---
-  const handleVoiceToggle = (checked: boolean) => {
-    setVoiceEnabled(checked);
-    saveSetting("voice_enabled", String(checked));
-  };
-
-  const handleVoiceNameBlur = () => {
-    saveSetting("voice_name", voiceName);
   };
 
   // --- Hooks ---
@@ -434,74 +398,6 @@ export function SettingsPage() {
                 />
               </div>
             </CardContent>
-          </Card>
-
-          {/* Sound Section */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Volume2 className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">
-                    {t("settings.sound")}
-                  </CardTitle>
-                </div>
-                <Switch
-                  checked={soundEnabled}
-                  onCheckedChange={handleSoundToggle}
-                />
-              </div>
-              <CardDescription>{t("settings.soundDesc")}</CardDescription>
-            </CardHeader>
-            {soundEnabled && (
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <Label>{t("settings.volume")}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={volume}
-                    onChange={(e) => setVolume(e.target.value)}
-                    onBlur={handleVolumeBlur}
-                    className="w-[180px]"
-                  />
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* Voice Section (macOS only) */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Mic className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">
-                    {t("settings.voice")}
-                  </CardTitle>
-                </div>
-                <Switch
-                  checked={voiceEnabled}
-                  onCheckedChange={handleVoiceToggle}
-                />
-              </div>
-              <CardDescription>{t("settings.voiceDesc")}</CardDescription>
-            </CardHeader>
-            {voiceEnabled && (
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <Label>{t("settings.voiceName")}</Label>
-                  <Input
-                    value={voiceName}
-                    onChange={(e) => setVoiceName(e.target.value)}
-                    onBlur={handleVoiceNameBlur}
-                    placeholder="Samantha"
-                    className="w-[180px]"
-                  />
-                </div>
-              </CardContent>
-            )}
           </Card>
 
           {/* Hooks Integration Section */}

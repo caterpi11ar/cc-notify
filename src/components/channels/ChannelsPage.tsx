@@ -58,7 +58,6 @@ const CHANNEL_TYPES = [
   "teams",
   "telegram",
   "webhook",
-  "sound",
   "voice",
   "tray_badge",
 ] as const;
@@ -78,7 +77,6 @@ interface ChannelConfigField {
 function getConfigFields(
   channelType: ChannelType,
   template?: string,
-  voiceMode?: string,
 ): ChannelConfigField[] {
   switch (channelType) {
     case "slack":
@@ -195,12 +193,12 @@ function getConfigFields(
           type: "textarea",
         },
       ];
-    case "sound":
+    case "voice":
       return [
         {
           key: "sound_file",
           label: "Sound File",
-          placeholder: "default, Ping, Glass, Basso...",
+          placeholder: "default.mp3",
         },
         {
           key: "volume",
@@ -209,59 +207,6 @@ function getConfigFields(
           type: "number",
         },
       ];
-    case "voice":
-      return voiceMode === "voice_pack"
-        ? [
-            {
-              key: "mode",
-              label: "Mode",
-              placeholder: "",
-              type: "select",
-              options: [
-                { value: "tts", label: "TTS" },
-                { value: "voice_pack", label: "Voice Pack" },
-              ],
-            },
-            {
-              key: "voice_pack_dir",
-              label: "Voice Pack Directory",
-              placeholder: "/Users/you/voice-pack",
-            },
-            {
-              key: "voice",
-              label: "Voice Name",
-              placeholder: "Samantha, Alex, Victoria...",
-            },
-            {
-              key: "rate",
-              label: "Rate",
-              placeholder: "200",
-              type: "number",
-            },
-          ]
-        : [
-            {
-              key: "mode",
-              label: "Mode",
-              placeholder: "",
-              type: "select",
-              options: [
-                { value: "tts", label: "TTS" },
-                { value: "voice_pack", label: "Voice Pack" },
-              ],
-            },
-            {
-              key: "voice",
-              label: "Voice Name",
-              placeholder: "Samantha, Alex, Victoria...",
-            },
-            {
-              key: "rate",
-              label: "Rate",
-              placeholder: "200",
-              type: "number",
-            },
-          ];
     case "native":
       return [
         {
@@ -360,12 +305,9 @@ export function ChannelsPage() {
       form.channel_type === "webhook"
         ? (form.config.template || "generic")
         : undefined;
-    const voiceMode =
-      form.channel_type === "voice" ? (form.config.mode || "tts") : undefined;
     const fields = getConfigFields(
       form.channel_type as ChannelType,
       webhookTemplate,
-      voiceMode,
     );
     for (const field of fields) {
       if (field.type === "number" && config[field.key] != null) {
@@ -471,19 +413,21 @@ export function ChannelsPage() {
     }));
   };
 
-  const handleSelectVoicePackDir = async () => {
+  const handleSelectSoundFile = async () => {
     try {
       const selected = await open({
-        directory: true,
         multiple: false,
-        defaultPath: form.config.voice_pack_dir || undefined,
-        title: "Select Voice Pack Directory",
+        defaultPath: form.config.sound_file || undefined,
+        title: "Select Sound File",
+        filters: [
+          { name: "Audio", extensions: ["mp3", "wav", "aiff", "m4a", "ogg", "flac"] },
+        ],
       });
       if (typeof selected === "string" && selected.trim()) {
-        setConfigValue("voice_pack_dir", selected);
+        setConfigValue("sound_file", selected);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to select folder");
+      toast.error(error instanceof Error ? error.message : "Failed to select file");
     }
   };
 
@@ -501,10 +445,8 @@ export function ChannelsPage() {
     form.channel_type === "webhook"
       ? (form.config.template || "generic")
       : undefined;
-  const voiceMode =
-    form.channel_type === "voice" ? (form.config.mode || "tts") : undefined;
   const configFields = form.channel_type
-    ? getConfigFields(form.channel_type as ChannelType, webhookTemplate, voiceMode)
+    ? getConfigFields(form.channel_type as ChannelType, webhookTemplate)
     : [];
 
   return (
@@ -740,17 +682,17 @@ export function ChannelsPage() {
                         onChange={(e) => setConfigValue(field.key, e.target.value)}
                         placeholder={field.placeholder}
                       />
-                    ) : field.key === "voice_pack_dir" ? (
+                    ) : field.key === "sound_file" ? (
                       <div className="flex gap-2">
                         <Input
                           value={form.config[field.key] ?? ""}
+                          onChange={(e) => setConfigValue(field.key, e.target.value)}
                           placeholder={field.placeholder}
-                          readOnly
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={handleSelectVoicePackDir}
+                          onClick={handleSelectSoundFile}
                         >
                           <FolderOpen className="h-4 w-4" />
                           Browse
