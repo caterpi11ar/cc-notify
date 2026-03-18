@@ -795,13 +795,35 @@ fn send_generic_webhook(
 
 /// Play a sound notification
 fn play_sound(config: &serde_json::Value) -> Result<(), String> {
-    let sound_file = config["sound_file"].as_str();
+    // Treat "default" and "" the same as None (use OS default sound)
+    let sound_file = config["sound_file"]
+        .as_str()
+        .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("default"));
+
+    let volume = config["volume"].as_f64();
 
     #[cfg(target_os = "macos")]
     {
-        let file = sound_file.unwrap_or("/System/Library/Sounds/Glass.aiff");
-        std::process::Command::new("afplay")
-            .arg(file)
+        let resolved: String;
+        let file = match sound_file {
+            Some(name) if !name.contains('/') && !name.contains('.') => {
+                // Short name like "Glass", "Ping" — resolve to system sound
+                let system_path = format!("/System/Library/Sounds/{name}.aiff");
+                if std::path::Path::new(&system_path).exists() {
+                    resolved = system_path;
+                    &resolved
+                } else {
+                    name
+                }
+            }
+            Some(path) => path,
+            None => "/System/Library/Sounds/Glass.aiff",
+        };
+        let mut cmd = std::process::Command::new("afplay");
+        if let Some(v) = volume {
+            cmd.args(["-v", &v.to_string()]);
+        }
+        cmd.arg(file)
             .spawn()
             .map_err(|e| format!("Failed to play sound: {e}"))?;
         return Ok(());
@@ -810,12 +832,14 @@ fn play_sound(config: &serde_json::Value) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
         let file = sound_file.unwrap_or("/usr/share/sounds/freedesktop/stereo/complete.oga");
+        // Scale volume from 0.0–1.0 to paplay's 0–65536 range
+        let pa_volume = volume.map(|v| ((v * 65536.0) as u32).to_string());
         // Try paplay -> aplay -> ffplay
-        if std::process::Command::new("paplay")
-            .arg(file)
-            .spawn()
-            .is_ok()
-        {
+        let mut cmd = std::process::Command::new("paplay");
+        if let Some(ref vol) = pa_volume {
+            cmd.args(["--volume", vol]);
+        }
+        if cmd.arg(file).spawn().is_ok() {
             return Ok(());
         }
         if std::process::Command::new("aplay")
