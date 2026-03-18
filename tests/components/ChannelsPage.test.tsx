@@ -45,7 +45,7 @@ describe("ChannelsPage", () => {
     renderWithProviders(<ChannelsPage />);
     await waitFor(() => {
       const switches = screen.getAllByRole("switch");
-      expect(switches).toHaveLength(3);
+      expect(switches).toHaveLength(4);
     });
   });
 
@@ -123,7 +123,8 @@ describe("ChannelsPage", () => {
     });
 
     const switches = screen.getAllByRole("switch");
-    await user.click(switches[0]);
+    // switches[0] is global kill switch, use first channel toggle.
+    await user.click(switches[1]);
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalled();

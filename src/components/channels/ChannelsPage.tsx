@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   Plus,
   Trash2,
@@ -9,6 +10,7 @@ import {
   Pencil,
   Power,
   AlertTriangle,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +66,6 @@ const CHANNEL_TYPES = [
 type ChannelType = (typeof CHANNEL_TYPES)[number];
 
 const WEBHOOK_TEMPLATES = ["generic", "feishu"] as const;
-type WebhookTemplate = (typeof WEBHOOK_TEMPLATES)[number];
 
 interface ChannelConfigField {
   key: string;
@@ -74,7 +75,11 @@ interface ChannelConfigField {
   options?: { value: string; label: string }[];
 }
 
-function getConfigFields(channelType: ChannelType, template?: string): ChannelConfigField[] {
+function getConfigFields(
+  channelType: ChannelType,
+  template?: string,
+  voiceMode?: string,
+): ChannelConfigField[] {
   switch (channelType) {
     case "slack":
       return [
@@ -205,13 +210,58 @@ function getConfigFields(channelType: ChannelType, template?: string): ChannelCo
         },
       ];
     case "voice":
-      return [
-        {
-          key: "voice",
-          label: "Voice Name",
-          placeholder: "Samantha, Alex, Victoria...",
-        },
-      ];
+      return voiceMode === "voice_pack"
+        ? [
+            {
+              key: "mode",
+              label: "Mode",
+              placeholder: "",
+              type: "select",
+              options: [
+                { value: "tts", label: "TTS" },
+                { value: "voice_pack", label: "Voice Pack" },
+              ],
+            },
+            {
+              key: "voice_pack_dir",
+              label: "Voice Pack Directory",
+              placeholder: "/Users/you/voice-pack",
+            },
+            {
+              key: "voice",
+              label: "Voice Name",
+              placeholder: "Samantha, Alex, Victoria...",
+            },
+            {
+              key: "rate",
+              label: "Rate",
+              placeholder: "200",
+              type: "number",
+            },
+          ]
+        : [
+            {
+              key: "mode",
+              label: "Mode",
+              placeholder: "",
+              type: "select",
+              options: [
+                { value: "tts", label: "TTS" },
+                { value: "voice_pack", label: "Voice Pack" },
+              ],
+            },
+            {
+              key: "voice",
+              label: "Voice Name",
+              placeholder: "Samantha, Alex, Victoria...",
+            },
+            {
+              key: "rate",
+              label: "Rate",
+              placeholder: "200",
+              type: "number",
+            },
+          ];
     case "native":
       return [
         {
@@ -306,8 +356,17 @@ export function ChannelsPage() {
 
     // Build config, converting number fields appropriately
     const config: Record<string, unknown> = { ...form.config };
-    const webhookTemplate = form.channel_type === "webhook" ? (form.config.template || "generic") : undefined;
-    const fields = getConfigFields(form.channel_type as ChannelType, webhookTemplate);
+    const webhookTemplate =
+      form.channel_type === "webhook"
+        ? (form.config.template || "generic")
+        : undefined;
+    const voiceMode =
+      form.channel_type === "voice" ? (form.config.mode || "tts") : undefined;
+    const fields = getConfigFields(
+      form.channel_type as ChannelType,
+      webhookTemplate,
+      voiceMode,
+    );
     for (const field of fields) {
       if (field.type === "number" && config[field.key] != null) {
         const num = parseFloat(config[field.key] as string);
@@ -412,6 +471,22 @@ export function ChannelsPage() {
     }));
   };
 
+  const handleSelectVoicePackDir = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        defaultPath: form.config.voice_pack_dir || undefined,
+        title: "Select Voice Pack Directory",
+      });
+      if (typeof selected === "string" && selected.trim()) {
+        setConfigValue("voice_pack_dir", selected);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to select folder");
+    }
+  };
+
   const isSaving = createChannel.isPending || updateChannel.isPending;
 
   if (isLoading) {
@@ -422,9 +497,14 @@ export function ChannelsPage() {
     );
   }
 
-  const webhookTemplate = form.channel_type === "webhook" ? (form.config.template || "generic") : undefined;
+  const webhookTemplate =
+    form.channel_type === "webhook"
+      ? (form.config.template || "generic")
+      : undefined;
+  const voiceMode =
+    form.channel_type === "voice" ? (form.config.mode || "tts") : undefined;
   const configFields = form.channel_type
-    ? getConfigFields(form.channel_type as ChannelType, webhookTemplate)
+    ? getConfigFields(form.channel_type as ChannelType, webhookTemplate, voiceMode)
     : [];
 
   return (
@@ -660,6 +740,22 @@ export function ChannelsPage() {
                         onChange={(e) => setConfigValue(field.key, e.target.value)}
                         placeholder={field.placeholder}
                       />
+                    ) : field.key === "voice_pack_dir" ? (
+                      <div className="flex gap-2">
+                        <Input
+                          value={form.config[field.key] ?? ""}
+                          placeholder={field.placeholder}
+                          readOnly
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleSelectVoicePackDir}
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                          Browse
+                        </Button>
+                      </div>
                     ) : (
                       <Input
                         type={field.type === "number" ? "number" : "text"}

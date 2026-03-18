@@ -44,8 +44,31 @@ AI CLI tools like Claude Code, Codex, and Gemini CLI often run long tasks in the
 | **HTTP Webhook** | Generic webhook with custom method, headers, and body template |
 | **Webhook: Feishu** | Feishu (Lark) bot webhook with interactive card format |
 | **Sound** | Cross-platform sound alerts (macOS/Linux/Windows) |
-| **Voice** | Text-to-speech readout (macOS `say` command) |
+| **Voice** | Text-to-speech or custom local voice pack (macOS) |
 | **Tray Badge** | macOS dock badge count that increments with each notification |
+
+### Custom Voice Pack (macOS)
+
+You can configure the `voice` channel in **Channels** with:
+
+- `mode`: `tts` or `voice_pack`
+- `voice_pack_dir`: local directory path (required for `voice_pack`)
+- `voice` / `rate`: used in `tts` mode
+
+Voice pack naming uses event IDs:
+
+```text
+<voice_pack_dir>/
+  stop.wav
+  notification.idle_prompt.aiff
+  notification.permission_prompt.m4a
+  default.mp3
+```
+
+Lookup order per event:
+1. `<event_id>.wav` -> `.aiff` -> `.m4a` -> `.mp3`
+2. `default.wav` -> `.aiff` -> `.m4a` -> `.mp3`
+3. If still not found, skip playback (no sound)
 
 ### Event Types & Routing
 

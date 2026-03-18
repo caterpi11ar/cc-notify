@@ -40,8 +40,31 @@ Claude Code、Codex、Gemini CLI 等 AI CLI 工具经常在后台执行长时间
 | **HTTP Webhook** | 通用 Webhook，支持自定义方法、请求头和模板 |
 | **Webhook: 飞书** | 飞书机器人 Webhook，支持交互式卡片格式 |
 | **声音** | 跨平台声音提醒（macOS/Linux/Windows） |
-| **语音** | 语音播报通知内容（macOS `say` 命令） |
+| **语音** | 语音播报（支持系统 TTS 与本地语音包，macOS） |
 | **托盘徽标** | macOS Dock 角标计数，随通知递增 |
+
+### 自定义语音包（macOS）
+
+在 **Channels** 的 `voice` 通道中可配置：
+
+- `mode`：`tts` 或 `voice_pack`
+- `voice_pack_dir`：本地语音包目录（`voice_pack` 模式必填）
+- `voice` / `rate`：`tts` 模式下使用
+
+语音包按事件 ID 命名：
+
+```text
+<voice_pack_dir>/
+  stop.wav
+  notification.idle_prompt.aiff
+  notification.permission_prompt.m4a
+  default.mp3
+```
+
+单个事件的查找顺序：
+1. `<event_id>.wav` -> `.aiff` -> `.m4a` -> `.mp3`
+2. `default.wav` -> `.aiff` -> `.m4a` -> `.mp3`
+3. 仍未命中则静默跳过（不播放）
 
 ### 事件类型与路由
 
