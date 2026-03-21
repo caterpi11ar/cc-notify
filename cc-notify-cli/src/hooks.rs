@@ -100,6 +100,86 @@ fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Check if a hook entry's command contains "cc-notify"
+fn is_cc_notify_entry(entry: &serde_json::Value) -> bool {
+    if let Some(hooks) = entry.get("hooks").and_then(|h| h.as_array()) {
+        hooks.iter().any(|hook| {
+            hook.get("command")
+                .and_then(|c| c.as_str())
+                .map(|c| c.contains("cc-notify"))
+                .unwrap_or(false)
+        })
+    } else {
+        false
+    }
+}
+
+/// Merge a cc-notify hook entry into a specific event type array within hooks.
+/// If an existing cc-notify entry is found, it is replaced; otherwise the new entry is appended.
+fn merge_hook_entry(
+    hooks: &mut serde_json::Value,
+    event_name: &str,
+    entry: serde_json::Value,
+) {
+    let arr = hooks
+        .as_object_mut()
+        .unwrap()
+        .entry(event_name)
+        .or_insert_with(|| serde_json::json!([]))
+        .as_array_mut()
+        .unwrap();
+
+    if let Some(pos) = arr.iter().position(|e| is_cc_notify_entry(e)) {
+        arr[pos] = entry;
+    } else {
+        arr.push(entry);
+    }
+}
+
+/// Selectively remove cc-notify entries from a hooks JSON object.
+/// Cleans up empty arrays and returns whether hooks object is now empty.
+fn remove_cc_notify_from_hooks(hooks: &mut serde_json::Map<String, serde_json::Value>) {
+    let keys: Vec<String> = hooks.keys().cloned().collect();
+    for key in &keys {
+        if let Some(arr) = hooks.get_mut(key).and_then(|v| v.as_array_mut()) {
+            arr.retain(|entry| !is_cc_notify_entry(entry));
+        }
+    }
+
+    // Clean up empty arrays
+    let empty_keys: Vec<String> = hooks
+        .iter()
+        .filter(|(_, v)| v.as_array().is_some_and(|a| a.is_empty()))
+        .map(|(k, _)| k.clone())
+        .collect();
+    for key in empty_keys {
+        hooks.remove(&key);
+    }
+}
+
+fn value_contains_cc_notify(value: &toml_edit::Value) -> bool {
+    if let Some(s) = value.as_str() {
+        return s.contains("cc-notify");
+    }
+
+    value
+        .as_array()
+        .is_some_and(|arr| {
+            arr.iter()
+                .filter_map(|value| value.as_str())
+                .any(|s| s.contains("cc-notify"))
+        })
+}
+
+fn notify_item_contains_cc_notify(item: &toml_edit::Item) -> bool {
+    item.as_value().is_some_and(value_contains_cc_notify)
+}
+
+fn codex_doc_has_cc_notify_hook(doc: &toml_edit::DocumentMut) -> bool {
+    doc.get("notify")
+        .is_some_and(notify_item_contains_cc_notify)
+}
+
 /// Install hooks for specified tool(s)
 pub fn install(tool: &str) -> Result<(), String> {
     match tool {
@@ -170,7 +250,10 @@ pub fn status() -> Result<(), String> {
     let codex_path = get_codex_config_path();
     let codex_installed = if codex_path.exists() {
         let content = std::fs::read_to_string(&codex_path).unwrap_or_default();
-        content.contains("cc-notify")
+        content
+            .parse::<toml_edit::DocumentMut>()
+            .map(|doc| codex_doc_has_cc_notify_hook(&doc))
+            .unwrap_or(false)
     } else {
         false
     };
@@ -242,44 +325,31 @@ fn install_claude_hooks() -> Result<(), String> {
         serde_json::json!({})
     };
 
-    // Only modify the "hooks" key, preserve everything else
-    settings["hooks"] = serde_json::json!({
-        "Stop": [{
-            "matcher": "",
+    // Ensure hooks object exists
+    if !settings.get("hooks").is_some_and(|h| h.is_object()) {
+        settings["hooks"] = serde_json::json!({});
+    }
+
+    let hooks = settings.get_mut("hooks").unwrap();
+
+    let entries: Vec<(&str, &str, &str)> = vec![
+        ("Stop", "", "stop"),
+        ("Notification", "idle_prompt|permission_prompt|auth_success|elicitation_dialog", "notification"),
+        ("SubagentStop", "", "subagent-stop"),
+        ("SessionStart", "", "session-start"),
+        ("SessionEnd", "", "session-end"),
+    ];
+
+    for (event_name, matcher, event_flag) in entries {
+        let entry = serde_json::json!({
+            "matcher": matcher,
             "hooks": [{
                 "type": "command",
-                "command": format!("{} send --event stop --tool claude --silent", bin)
+                "command": format!("{} send --event {} --tool claude --silent", bin, event_flag)
             }]
-        }],
-        "Notification": [{
-            "matcher": "idle_prompt|permission_prompt|auth_success|elicitation_dialog",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event notification --tool claude --silent", bin)
-            }]
-        }],
-        "SubagentStop": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event subagent-stop --tool claude --silent", bin)
-            }]
-        }],
-        "SessionStart": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event session-start --tool claude --silent", bin)
-            }]
-        }],
-        "SessionEnd": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event session-end --tool claude --silent", bin)
-            }]
-        }]
-    });
+        });
+        merge_hook_entry(hooks, event_name, entry);
+    }
 
     let content = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {e}"))?;
@@ -302,9 +372,14 @@ fn uninstall_claude_hooks() -> Result<(), String> {
     let mut settings: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse settings: {e}"))?;
 
-    // Only remove hooks key, preserve everything else
-    if let Some(obj) = settings.as_object_mut() {
-        obj.remove("hooks");
+    if let Some(hooks) = settings.get_mut("hooks").and_then(|h| h.as_object_mut()) {
+        remove_cc_notify_from_hooks(hooks);
+
+        if hooks.is_empty() {
+            if let Some(obj) = settings.as_object_mut() {
+                obj.remove("hooks");
+            }
+        }
     }
 
     let new_content = serde_json::to_string_pretty(&settings)
@@ -324,7 +399,7 @@ fn install_codex_hooks() -> Result<(), String> {
     let bin = get_cc_notify_bin();
 
     // Read existing config or create empty
-    let mut content = if config_path.exists() {
+    let content = if config_path.exists() {
         backup_file(&config_path)?;
         std::fs::read_to_string(&config_path)
             .map_err(|e| format!("Failed to read Codex config: {e}"))?
@@ -368,7 +443,13 @@ fn uninstall_codex_hooks() -> Result<(), String> {
         .parse()
         .map_err(|e| format!("Failed to parse config: {e}"))?;
 
-    doc.remove("notify");
+    // Only remove notify if it contains cc-notify
+    if doc
+        .get("notify")
+        .is_some_and(notify_item_contains_cc_notify)
+    {
+        doc.remove("notify");
+    }
 
     atomic_write(&config_path, &doc.to_string())?;
     println!("Codex hooks uninstalled");
@@ -393,23 +474,28 @@ fn install_gemini_hooks() -> Result<(), String> {
         serde_json::json!({})
     };
 
-    // Only modify hooks-related keys
-    settings["hooks"] = serde_json::json!({
-        "Notification": [{
-            "matcher": "idle_prompt|permission_prompt",
+    // Ensure hooks object exists
+    if !settings.get("hooks").is_some_and(|h| h.is_object()) {
+        settings["hooks"] = serde_json::json!({});
+    }
+
+    let hooks = settings.get_mut("hooks").unwrap();
+
+    let entries: Vec<(&str, &str, &str)> = vec![
+        ("Notification", "idle_prompt|permission_prompt", "notification"),
+        ("AfterAgent", "", "stop"),
+    ];
+
+    for (event_name, matcher, event_flag) in entries {
+        let entry = serde_json::json!({
+            "matcher": matcher,
             "hooks": [{
                 "type": "command",
-                "command": format!("{} send --event notification --tool gemini --silent", bin)
+                "command": format!("{} send --event {} --tool gemini --silent", bin, event_flag)
             }]
-        }],
-        "AfterAgent": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event stop --tool gemini --silent", bin)
-            }]
-        }]
-    });
+        });
+        merge_hook_entry(hooks, event_name, entry);
+    }
 
     let content = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {e}"))?;
@@ -432,8 +518,14 @@ fn uninstall_gemini_hooks() -> Result<(), String> {
     let mut settings: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse settings: {e}"))?;
 
-    if let Some(obj) = settings.as_object_mut() {
-        obj.remove("hooks");
+    if let Some(hooks) = settings.get_mut("hooks").and_then(|h| h.as_object_mut()) {
+        remove_cc_notify_from_hooks(hooks);
+
+        if hooks.is_empty() {
+            if let Some(obj) = settings.as_object_mut() {
+                obj.remove("hooks");
+            }
+        }
     }
 
     let new_content = serde_json::to_string_pretty(&settings)
@@ -442,4 +534,31 @@ fn uninstall_gemini_hooks() -> Result<(), String> {
 
     println!("Gemini CLI hooks uninstalled");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::codex_doc_has_cc_notify_hook;
+
+    #[test]
+    fn detects_cc_notify_in_notify_array() {
+        let doc: toml_edit::DocumentMut =
+            r#"notify = ["/Users/test/.cc-notify/bin/cc-notify", "send", "--event", "stop"]"#
+                .parse()
+                .expect("valid toml");
+        assert!(codex_doc_has_cc_notify_hook(&doc));
+    }
+
+    #[test]
+    fn ignores_cc_notify_in_unrelated_project_path() {
+        let doc: toml_edit::DocumentMut = r#"
+            model = "gpt-5.3-codex"
+
+            [projects."/Users/test/repos/cc-notify"]
+            trust_level = "trusted"
+        "#
+        .parse()
+        .expect("valid toml");
+        assert!(!codex_doc_has_cc_notify_hook(&doc));
+    }
 }

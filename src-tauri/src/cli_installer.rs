@@ -49,6 +49,8 @@ fn try_install_cli(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir_all(parent)?;
     }
 
+    // Remove old binary first so macOS doesn't cache the stale executable (inode reuse issue)
+    let _ = fs::remove_file(&dest);
     fs::copy(&resource_path, &dest)?;
 
     // Set executable permission on Unix

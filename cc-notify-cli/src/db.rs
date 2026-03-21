@@ -19,8 +19,12 @@ pub fn open_db_rw(path: &Path) -> Result<Connection, String> {
         ));
     }
     let conn = Connection::open(path).map_err(|e| format!("Failed to open database: {e}"))?;
+    conn.busy_timeout(std::time::Duration::from_secs(5))
+        .map_err(|e| format!("Failed to set busy timeout: {e}"))?;
     conn.execute("PRAGMA foreign_keys = ON;", [])
         .map_err(|e| format!("Failed to enable foreign keys: {e}"))?;
+    // WAL mode allows concurrent reads/writes; non-fatal if another process holds the DB
+    let _ = conn.execute("PRAGMA journal_mode = WAL;", []);
     Ok(conn)
 }
 

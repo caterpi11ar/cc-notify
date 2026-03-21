@@ -1,6 +1,6 @@
 use crate::config;
 use crate::error::AppError;
-use super::{get_cc_notify_bin, backup_file};
+use super::{get_cc_notify_bin, backup_file, merge_hook_entry, is_cc_notify_entry};
 
 /// Check if Claude Code hooks are installed
 pub fn is_installed() -> Result<bool, AppError> {
@@ -14,6 +14,7 @@ pub fn is_installed() -> Result<bool, AppError> {
 }
 
 /// Install Claude Code hooks into ~/.claude/settings.json
+/// Merges cc-notify entries into existing hooks, preserving user's other hook entries.
 pub fn install() -> Result<(), AppError> {
     let settings_path = config::get_claude_settings_path();
     let bin = get_cc_notify_bin();
@@ -26,44 +27,31 @@ pub fn install() -> Result<(), AppError> {
         serde_json::json!({})
     };
 
-    // Only modify the "hooks" key, preserve everything else
-    settings["hooks"] = serde_json::json!({
-        "Stop": [{
-            "matcher": "",
+    // Ensure hooks object exists
+    if !settings.get("hooks").is_some_and(|h| h.is_object()) {
+        settings["hooks"] = serde_json::json!({});
+    }
+
+    let hooks = settings.get_mut("hooks").unwrap();
+
+    let entries: Vec<(&str, &str, &str)> = vec![
+        ("Stop", "", "stop"),
+        ("Notification", "idle_prompt|permission_prompt|auth_success|elicitation_dialog", "notification"),
+        ("SubagentStop", "", "subagent-stop"),
+        ("SessionStart", "", "session-start"),
+        ("SessionEnd", "", "session-end"),
+    ];
+
+    for (event_name, matcher, event_flag) in entries {
+        let entry = serde_json::json!({
+            "matcher": matcher,
             "hooks": [{
                 "type": "command",
-                "command": format!("{} send --event stop --tool claude --silent", bin)
+                "command": format!("{} send --event {} --tool claude --silent", bin, event_flag)
             }]
-        }],
-        "Notification": [{
-            "matcher": "idle_prompt|permission_prompt|auth_success|elicitation_dialog",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event notification --tool claude --silent", bin)
-            }]
-        }],
-        "SubagentStop": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event subagent-stop --tool claude --silent", bin)
-            }]
-        }],
-        "SessionStart": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event session-start --tool claude --silent", bin)
-            }]
-        }],
-        "SessionEnd": [{
-            "matcher": "",
-            "hooks": [{
-                "type": "command",
-                "command": format!("{} send --event session-end --tool claude --silent", bin)
-            }]
-        }]
-    });
+        });
+        merge_hook_entry(hooks, event_name, entry);
+    }
 
     config::write_json_file(&settings_path, &settings)?;
     log::info!(
@@ -74,6 +62,7 @@ pub fn install() -> Result<(), AppError> {
 }
 
 /// Uninstall Claude Code hooks from ~/.claude/settings.json
+/// Only removes cc-notify entries, preserving user's other hook entries.
 pub fn uninstall() -> Result<(), AppError> {
     let settings_path = config::get_claude_settings_path();
     if !settings_path.exists() {
@@ -84,9 +73,31 @@ pub fn uninstall() -> Result<(), AppError> {
 
     let mut settings: serde_json::Value = config::read_json_file(&settings_path)?;
 
-    // Only remove hooks key, preserve everything else
-    if let Some(obj) = settings.as_object_mut() {
-        obj.remove("hooks");
+    if let Some(hooks) = settings.get_mut("hooks").and_then(|h| h.as_object_mut()) {
+        // Remove cc-notify entries from each event type array
+        let keys: Vec<String> = hooks.keys().cloned().collect();
+        for key in &keys {
+            if let Some(arr) = hooks.get_mut(key).and_then(|v| v.as_array_mut()) {
+                arr.retain(|entry| !is_cc_notify_entry(entry));
+            }
+        }
+
+        // Clean up empty arrays
+        let empty_keys: Vec<String> = hooks
+            .iter()
+            .filter(|(_, v)| v.as_array().is_some_and(|a| a.is_empty()))
+            .map(|(k, _)| k.clone())
+            .collect();
+        for key in empty_keys {
+            hooks.remove(&key);
+        }
+
+        // Remove hooks object entirely if empty
+        if hooks.is_empty() {
+            if let Some(obj) = settings.as_object_mut() {
+                obj.remove("hooks");
+            }
+        }
     }
 
     config::write_json_file(&settings_path, &settings)?;

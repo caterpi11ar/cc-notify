@@ -12,6 +12,12 @@ import {
 } from "@/lib/api";
 import type { Channel, EventType, Rule, Routing, Template } from "@/types";
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "An unknown error occurred";
+}
+
 // ── Channels ──
 
 export const useCreateChannel = () => {
@@ -22,8 +28,8 @@ export const useCreateChannel = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -36,8 +42,8 @@ export const useUpdateChannel = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -49,8 +55,8 @@ export const useDeleteChannel = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -71,8 +77,8 @@ export const useCreateEventType = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eventTypes"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -90,8 +96,8 @@ export const useUpdateEventType = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eventTypes"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -103,8 +109,8 @@ export const useDeleteEventType = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eventTypes"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -119,8 +125,8 @@ export const useCreateRule = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rules"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -133,8 +139,8 @@ export const useUpdateRule = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rules"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -146,8 +152,8 @@ export const useDeleteRule = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rules"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -161,8 +167,8 @@ export const useSetRouting = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routing"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -180,8 +186,8 @@ export const useDeleteRouting = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routing"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -196,8 +202,8 @@ export const useCreateTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -215,8 +221,8 @@ export const useUpdateTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -228,8 +234,8 @@ export const useDeleteTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -243,8 +249,8 @@ export const useClearHistory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["history"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -259,8 +265,8 @@ export const useSetSetting = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -272,8 +278,8 @@ export const useDeleteSetting = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -287,8 +293,8 @@ export const useInstallHook = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hooksStatus"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };
@@ -300,8 +306,8 @@ export const useUninstallHook = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hooksStatus"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 };

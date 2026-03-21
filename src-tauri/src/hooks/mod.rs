@@ -51,6 +51,43 @@ pub(crate) fn backup_file(path: &std::path::Path) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Check if a hook entry's command contains "cc-notify"
+pub(crate) fn is_cc_notify_entry(entry: &serde_json::Value) -> bool {
+    if let Some(hooks) = entry.get("hooks").and_then(|h| h.as_array()) {
+        hooks.iter().any(|hook| {
+            hook.get("command")
+                .and_then(|c| c.as_str())
+                .map(|c| c.contains("cc-notify"))
+                .unwrap_or(false)
+        })
+    } else {
+        false
+    }
+}
+
+/// Merge a cc-notify hook entry into a specific event type array within hooks.
+/// If an existing cc-notify entry is found, it is replaced; otherwise the new entry is appended.
+pub(crate) fn merge_hook_entry(
+    hooks: &mut serde_json::Value,
+    event_name: &str,
+    entry: serde_json::Value,
+) {
+    let arr = hooks
+        .as_object_mut()
+        .unwrap()
+        .entry(event_name)
+        .or_insert_with(|| serde_json::json!([]))
+        .as_array_mut()
+        .unwrap();
+
+    // Replace existing cc-notify entry if present, otherwise append
+    if let Some(pos) = arr.iter().position(|e| is_cc_notify_entry(e)) {
+        arr[pos] = entry;
+    } else {
+        arr.push(entry);
+    }
+}
+
 pub fn get_hooks_status() -> Result<HooksStatus, AppError> {
     Ok(HooksStatus {
         claude: claude::is_installed()?,

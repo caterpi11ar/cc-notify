@@ -43,9 +43,11 @@ impl Database {
         let conn = Connection::open(&db_path)
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        conn.execute("PRAGMA foreign_keys = ON;", [])
+        conn.pragma_update(None, "foreign_keys", "ON")
             .map_err(|e| AppError::Database(e.to_string()))?;
-        conn.execute("PRAGMA auto_vacuum = INCREMENTAL;", [])
+        conn.pragma_update(None, "journal_mode", "WAL")
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        conn.pragma_update(None, "auto_vacuum", "INCREMENTAL")
             .map_err(|e| AppError::Database(e.to_string()))?;
 
         let db = Self {
@@ -63,7 +65,7 @@ impl Database {
         let conn = Connection::open_in_memory()
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        conn.execute("PRAGMA foreign_keys = ON;", [])
+        conn.pragma_update(None, "foreign_keys", "ON")
             .map_err(|e| AppError::Database(e.to_string()))?;
 
         let db = Self {
