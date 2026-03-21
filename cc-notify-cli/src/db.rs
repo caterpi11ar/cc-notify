@@ -28,20 +28,12 @@ pub fn open_db_rw(path: &Path) -> Result<Connection, String> {
     Ok(conn)
 }
 
-/// Get a setting value from the database
-pub fn get_setting(conn: &Connection, key: &str) -> Option<String> {
-    conn.query_row(
-        "SELECT value FROM settings WHERE key = ?1",
-        rusqlite::params![key],
-        |row| row.get(0),
-    )
-    .ok()
-}
-
 /// Get all enabled channels with their configs
 pub fn get_enabled_channels(conn: &Connection) -> Result<Vec<(String, String, String)>, String> {
     let mut stmt = conn
-        .prepare("SELECT id, channel_type, config FROM channels WHERE enabled = 1 ORDER BY sort_index")
+        .prepare(
+            "SELECT id, channel_type, config FROM channels WHERE enabled = 1 ORDER BY sort_index",
+        )
         .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
     let channels = stmt

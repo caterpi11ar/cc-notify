@@ -26,3 +26,6 @@ tempfile = "3"
 uuid = { version = "1.11", features = ["v4"] }
 thiserror = "2.0"
 atty = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+mac-notification-sys = "0.6"
