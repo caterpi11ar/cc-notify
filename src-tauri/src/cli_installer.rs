@@ -175,11 +175,11 @@ mod tests {
     fn parses_versioned_cli_name() {
         if cfg!(windows) {
             assert_eq!(
-                parse_versioned_cli_name("cc-notify-0.2.2.exe"),
-                Some("0.2.2")
+                parse_versioned_cli_name("cc-notify-0.2.3.exe"),
+                Some("0.2.3")
             );
         } else {
-            assert_eq!(parse_versioned_cli_name("cc-notify-0.2.2"), Some("0.2.2"));
+            assert_eq!(parse_versioned_cli_name("cc-notify-0.2.3"), Some("0.2.3"));
         }
     }
 
