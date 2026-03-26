@@ -42,6 +42,32 @@ fn click_worker_timeout_seconds() -> u64 {
         .unwrap_or(DEFAULT_CLICK_WORKER_TIMEOUT_SECONDS)
 }
 
+#[cfg(target_os = "macos")]
+fn current_launchctl_service_label() -> Option<String> {
+    std::env::var("XPC_SERVICE_NAME")
+        .ok()
+        .filter(|label| label.starts_with("com.ccnotify.native-click-worker."))
+}
+
+#[cfg(target_os = "macos")]
+fn remove_launchctl_service(label: &str) {
+    click_debug_log(&format!("remove launchctl service label={label}"));
+    match Command::new("launchctl")
+        .arg("remove")
+        .arg(label)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+    {
+        Ok(status) => click_debug_log(&format!(
+            "remove launchctl service exit_status={:?}",
+            status.code()
+        )),
+        Err(err) => click_debug_log(&format!("remove launchctl service failed: {err}")),
+    }
+}
+
 #[cfg(all(unix, not(target_os = "macos")))]
 fn send_native_notification_with_action(
     summary: &str,
@@ -169,13 +195,18 @@ pub fn run_native_click_worker(
         "worker start timeout={} summary={:?} jump_command={:?}",
         timeout_seconds, summary, jump_command
     ));
+    let launchctl_label = current_launchctl_service_label();
 
     let finished = Arc::new(AtomicBool::new(false));
     if timeout_seconds > 0 {
         let done = Arc::clone(&finished);
+        let timeout_launchctl_label = launchctl_label.clone();
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_secs(timeout_seconds));
             if !done.load(Ordering::SeqCst) {
+                if let Some(label) = timeout_launchctl_label.as_deref() {
+                    remove_launchctl_service(label);
+                }
                 click_debug_log("worker timeout reached, exiting");
                 std::process::exit(0);
             }
@@ -192,17 +223,22 @@ pub fn run_native_click_worker(
     finished.store(true, Ordering::SeqCst);
     click_debug_log(&format!("worker response={:?}", response));
 
-    if matches!(
+    let jump_result = if matches!(
         response,
         NotificationResponse::Click | NotificationResponse::ActionButton(_)
     ) {
         click_debug_log("worker response matched click/action, executing jump command");
-        execute_jump_command(jump_command)?;
+        execute_jump_command(jump_command)
     } else {
         click_debug_log("worker response did not match click/action, skip jump command");
+        Ok(())
+    };
+
+    if let Some(label) = launchctl_label.as_deref() {
+        remove_launchctl_service(label);
     }
 
-    Ok(())
+    jump_result
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
