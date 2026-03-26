@@ -44,12 +44,3 @@ pub struct TerminalContext {
     pub tab_id: Option<String>,
     pub pane_id: Option<String>,
 }
-
-impl TerminalContext {
-    pub(crate) fn has_any_identifier(&self) -> bool {
-        self.terminal_id.is_some()
-            || self.window_id.is_some()
-            || self.tab_id.is_some()
-            || self.pane_id.is_some()
-    }
-}
