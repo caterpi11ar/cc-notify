@@ -65,12 +65,10 @@ pub async fn test_channel(
     _state: State<'_, AppState>,
     id: String,
 ) -> Result<SendResult, String> {
-    let cli_path = dirs::home_dir()
-        .ok_or("Cannot determine home directory")?
-        .join(".cc-notify/bin/cc-notify");
+    let cli_path = crate::config::get_cli_bin_path();
 
     if !cli_path.exists() {
-        return Err("CLI binary not found at ~/.cc-notify/bin/cc-notify".to_string());
+        return Err(format!("CLI binary not found at {}", cli_path.display()));
     }
 
     let output = tokio::process::Command::new(&cli_path)

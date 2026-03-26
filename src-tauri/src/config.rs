@@ -28,6 +28,26 @@ pub fn get_cli_bin_path() -> PathBuf {
     get_app_config_dir().join("bin").join(name)
 }
 
+/// Get versioned CLI binary path (~/.cc-notify/bin/cc-notify-<version>)
+pub fn get_versioned_cli_bin_path(version: &str) -> PathBuf {
+    let name = if cfg!(windows) {
+        format!("cc-notify-{version}.exe")
+    } else {
+        format!("cc-notify-{version}")
+    };
+    get_app_config_dir().join("bin").join(name)
+}
+
+/// Current app version used for versioned CLI filename.
+pub fn current_app_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+/// Get current app version's CLI binary path.
+pub fn get_current_versioned_cli_bin_path() -> PathBuf {
+    get_versioned_cli_bin_path(current_app_version())
+}
+
 /// Get cc-notify database path
 pub fn get_db_path() -> PathBuf {
     get_app_config_dir().join("cc-notify.db")
