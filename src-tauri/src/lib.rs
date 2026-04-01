@@ -26,6 +26,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
+                #[cfg(target_os = "macos")]
                 let _ = app.show();
                 let _ = window.unminimize();
                 let _ = window.show();
@@ -117,6 +118,7 @@ pub fn run() {
                     api.prevent_exit();
                 }
             }
+            #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => {
                 if let Some(window) = app_handle.get_webview_window("main") {
                     let _ = app_handle.show();

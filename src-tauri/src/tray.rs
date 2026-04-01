@@ -23,6 +23,7 @@ pub fn create_tray(app: &AppHandle) -> Result<TrayIcon, tauri::Error> {
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "show" => {
                 if let Some(window) = app.get_webview_window("main") {
+                    #[cfg(target_os = "macos")]
                     let _ = app.show();
                     let _ = window.unminimize();
                     let _ = window.show();
@@ -46,6 +47,7 @@ pub fn create_tray(app: &AppHandle) -> Result<TrayIcon, tauri::Error> {
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
+                        #[cfg(target_os = "macos")]
                         let _ = app.show();
                         let _ = window.unminimize();
                         let _ = window.show();
