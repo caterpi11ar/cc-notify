@@ -291,7 +291,7 @@ dependencies = [
 
 [[package]]
 name = "cc-notify-cli"
-version = "0.2.3"
+version = "0.2.5"
 dependencies = [
  "atty",
  "chrono",
