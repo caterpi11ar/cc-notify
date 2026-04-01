@@ -62,6 +62,73 @@ fn parse_wtp_locator(raw: &str) -> Option<(u32, u32, Option<u32>)> {
 }
 
 #[cfg(target_os = "macos")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum VscodeFork {
+    VsCode,
+    Cursor,
+    Windsurf,
+}
+
+#[cfg(target_os = "macos")]
+impl VscodeFork {
+    fn app_name(self) -> &'static str {
+        match self {
+            VscodeFork::VsCode => "Visual Studio Code",
+            VscodeFork::Cursor => "Cursor",
+            VscodeFork::Windsurf => "Windsurf",
+        }
+    }
+
+    fn cli_path(self) -> &'static str {
+        match self {
+            VscodeFork::VsCode => {
+                "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+            }
+            VscodeFork::Cursor => "/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
+            VscodeFork::Windsurf => {
+                "/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf"
+            }
+        }
+    }
+}
+
+/// Detect which VS Code fork is actually running when `TERM_PROGRAM=vscode`.
+#[cfg(target_os = "macos")]
+fn detect_vscode_fork() -> VscodeFork {
+    // 1. __CFBundleIdentifier: most reliable, set by macOS per-app
+    if let Ok(bundle_id) = std::env::var("__CFBundleIdentifier") {
+        let id = bundle_id.to_ascii_lowercase();
+        if id.contains("todesktop") || id.contains("cursor") {
+            return VscodeFork::Cursor;
+        }
+        if id.contains("codeium") || id.contains("windsurf") {
+            return VscodeFork::Windsurf;
+        }
+        if id.contains("microsoft") || id.contains("vscode") {
+            return VscodeFork::VsCode;
+        }
+    }
+
+    // 2. VSCODE_GIT_ASKPASS_NODE path contains the app bundle name
+    if let Ok(askpass) = std::env::var("VSCODE_GIT_ASKPASS_NODE") {
+        let path = askpass.to_ascii_lowercase();
+        if path.contains("cursor.app") {
+            return VscodeFork::Cursor;
+        }
+        if path.contains("windsurf.app") {
+            return VscodeFork::Windsurf;
+        }
+    }
+
+    // 3. Cursor-specific env var
+    if std::env::var_os("CURSOR_TRACE_DIR").is_some() {
+        return VscodeFork::Cursor;
+    }
+
+    VscodeFork::VsCode
+}
+
+#[cfg(target_os = "macos")]
 fn macos_app_name(program: &str) -> Option<&'static str> {
     let normalized = program.trim().to_ascii_lowercase();
     if normalized.is_empty() {
@@ -91,14 +158,19 @@ fn macos_app_name(program: &str) -> Option<&'static str> {
     if normalized.contains("alacritty") {
         return Some("Alacritty");
     }
+    // Check unambiguous fork names first
+    if normalized.contains("cursor") {
+        return Some("Cursor");
+    }
+    if normalized.contains("windsurf") {
+        return Some("Windsurf");
+    }
+    // "vscode" is ambiguous across forks -- detect which one
     if normalized.contains("vscode")
         || normalized.contains("visual studio code")
         || normalized == "code"
     {
-        return Some("Visual Studio Code");
-    }
-    if normalized.contains("cursor") {
-        return Some("Cursor");
+        return Some(detect_vscode_fork().app_name());
     }
     None
 }
@@ -120,20 +192,34 @@ fn fallback_activate_terminal_program(program: &str) -> Option<String> {
 #[cfg(target_os = "macos")]
 fn macos_terminal_jump_command(ctx: &NotificationContext, program: &str) -> Option<String> {
     let normalized = program.trim().to_ascii_lowercase();
+
+    // Handle VS Code and its forks (Cursor, Windsurf, etc.)
     if normalized.contains("vscode")
         || normalized.contains("visual studio code")
         || normalized == "code"
+        || normalized.contains("cursor")
+        || normalized.contains("windsurf")
     {
-        let code_cli = "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code";
-        let code_cli_escaped = shell_escape(code_cli);
+        let fork = if normalized.contains("cursor") {
+            VscodeFork::Cursor
+        } else if normalized.contains("windsurf") {
+            VscodeFork::Windsurf
+        } else {
+            // "vscode" / "Visual Studio Code" / "code" -- ambiguous, detect via env
+            detect_vscode_fork()
+        };
+
+        let cli_escaped = shell_escape(fork.cli_path());
+        let app_escaped = shell_escape(fork.app_name());
+
         if let Some(cwd) = ctx.cwd.as_deref().filter(|v| !v.trim().is_empty()) {
             let cwd_escaped = shell_escape(cwd);
             return Some(format!(
-                "if [ -x {code_cli_escaped} ]; then {code_cli_escaped} --reuse-window {cwd_escaped}; else open -a 'Visual Studio Code' --args --reuse-window {cwd_escaped}; fi"
+                "if [ -x {cli_escaped} ]; then {cli_escaped} --reuse-window {cwd_escaped}; else open -a {app_escaped} --args --reuse-window {cwd_escaped}; fi"
             ));
         }
         return Some(format!(
-            "if [ -x {code_cli_escaped} ]; then {code_cli_escaped} --reuse-window; else open -a 'Visual Studio Code'; fi"
+            "if [ -x {cli_escaped} ]; then {cli_escaped} --reuse-window; else open -a {app_escaped}; fi"
         ));
     }
 
@@ -438,6 +524,7 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn vscode_program_reuses_window_for_cwd() {
+        // When no fork-specific env vars are set, detect_vscode_fork() defaults to VsCode
         let mut ctx = make_ctx(
             TerminalContext {
                 program: Some("vscode".to_string()),
@@ -451,8 +538,85 @@ mod tests {
         ctx.cwd = Some("/tmp/demo".to_string());
 
         let cmd = resolve_terminal_jump_command(&ctx).expect("command");
-        assert!(cmd.contains("Visual Studio Code"));
         assert!(cmd.contains("--reuse-window '/tmp/demo'"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn cursor_program_generates_cursor_jump_command() {
+        let ctx = make_ctx(
+            TerminalContext {
+                program: Some("cursor".to_string()),
+                terminal_id: None,
+                window_id: None,
+                tab_id: None,
+                pane_id: None,
+            },
+            None,
+        );
+
+        let cmd = resolve_terminal_jump_command(&ctx).expect("command");
+        assert!(cmd.contains("Cursor"), "expected Cursor in command: {cmd}");
+        assert!(
+            !cmd.contains("Visual Studio Code"),
+            "should not contain VS Code: {cmd}"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn cursor_program_reuses_window_for_cwd() {
+        let mut ctx = make_ctx(
+            TerminalContext {
+                program: Some("cursor".to_string()),
+                terminal_id: None,
+                window_id: None,
+                tab_id: None,
+                pane_id: None,
+            },
+            None,
+        );
+        ctx.cwd = Some("/tmp/demo".to_string());
+
+        let cmd = resolve_terminal_jump_command(&ctx).expect("command");
+        assert!(cmd.contains("Cursor"));
+        assert!(cmd.contains("--reuse-window '/tmp/demo'"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn windsurf_program_generates_windsurf_jump_command() {
+        let ctx = make_ctx(
+            TerminalContext {
+                program: Some("windsurf".to_string()),
+                terminal_id: None,
+                window_id: None,
+                tab_id: None,
+                pane_id: None,
+            },
+            None,
+        );
+
+        let cmd = resolve_terminal_jump_command(&ctx).expect("command");
+        assert!(
+            cmd.contains("Windsurf"),
+            "expected Windsurf in command: {cmd}"
+        );
+        assert!(
+            !cmd.contains("Visual Studio Code"),
+            "should not contain VS Code: {cmd}"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn vscode_fork_enum_paths_are_consistent() {
+        use super::VscodeFork;
+        assert!(VscodeFork::VsCode
+            .cli_path()
+            .contains("Visual Studio Code.app"));
+        assert!(VscodeFork::Cursor.cli_path().contains("Cursor.app"));
+        assert!(VscodeFork::Windsurf.cli_path().contains("Windsurf.app"));
     }
 
     #[cfg(not(target_os = "macos"))]
