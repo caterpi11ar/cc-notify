@@ -1,6 +1,6 @@
 [package]
 name = "cc-notify-cli"
-version = "0.2.3"
+version = "0.2.4"
 description = "CLI for CC Notify - send notifications from AI CLI tool hooks"
 authors = ["CC-Notify Team"]
 license = "MIT"
