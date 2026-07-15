@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Bundle identifier for CC Notify app.
 /// Must match `identifier` in src-tauri/tauri.conf.json.
-pub const BUNDLE_ID: &str = "com.ccnotify.desktop";
+pub const BUNDLE_ID: &str = "com.local-ai-gateway.desktop";
 
 /// Rich notification context built from CLI args + stdin JSON.
 pub struct NotificationContext {

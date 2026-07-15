@@ -1,28 +1,26 @@
+use super::{backup_file, get_local_ai_gateway_bin};
 use crate::config;
 use crate::error::AppError;
-use super::{get_cc_notify_bin, backup_file};
 
-fn value_contains_cc_notify(value: &toml_edit::Value) -> bool {
+fn value_contains_local_ai_gateway(value: &toml_edit::Value) -> bool {
     if let Some(s) = value.as_str() {
-        return s.contains("cc-notify");
+        return s.contains("local-ai-gateway");
     }
 
-    value
-        .as_array()
-        .is_some_and(|arr| {
-            arr.iter()
-                .filter_map(|value| value.as_str())
-                .any(|s| s.contains("cc-notify"))
-        })
+    value.as_array().is_some_and(|arr| {
+        arr.iter()
+            .filter_map(|value| value.as_str())
+            .any(|s| s.contains("local-ai-gateway"))
+    })
 }
 
-fn notify_item_contains_cc_notify(item: &toml_edit::Item) -> bool {
-    item.as_value().is_some_and(value_contains_cc_notify)
+fn notify_item_contains_local_ai_gateway(item: &toml_edit::Item) -> bool {
+    item.as_value().is_some_and(value_contains_local_ai_gateway)
 }
 
-fn codex_doc_has_cc_notify_hook(doc: &toml_edit::DocumentMut) -> bool {
+fn codex_doc_has_local_ai_gateway_hook(doc: &toml_edit::DocumentMut) -> bool {
     doc.get("notify")
-        .is_some_and(notify_item_contains_cc_notify)
+        .is_some_and(notify_item_contains_local_ai_gateway)
 }
 
 /// Check if Codex hooks are installed
@@ -36,13 +34,13 @@ pub fn is_installed() -> Result<bool, AppError> {
     let doc: toml_edit::DocumentMut = content
         .parse()
         .map_err(|e| AppError::Config(format!("Failed to parse Codex config: {e}")))?;
-    Ok(codex_doc_has_cc_notify_hook(&doc))
+    Ok(codex_doc_has_local_ai_gateway_hook(&doc))
 }
 
 /// Install Codex hooks into ~/.codex/config.toml
 pub fn install() -> Result<(), AppError> {
     let config_path = config::get_codex_config_path();
-    let bin = get_cc_notify_bin();
+    let bin = get_local_ai_gateway_bin();
 
     // Read existing config or create empty
     let content = if config_path.exists() {
@@ -74,7 +72,7 @@ pub fn install() -> Result<(), AppError> {
 }
 
 /// Uninstall Codex hooks from ~/.codex/config.toml
-/// Only removes notify if it contains "cc-notify", preserving user's own notify config.
+/// Only removes notify if it contains "local-ai-gateway", preserving user's own notify config.
 pub fn uninstall() -> Result<(), AppError> {
     let config_path = config::get_codex_config_path();
     if !config_path.exists() {
@@ -91,7 +89,7 @@ pub fn uninstall() -> Result<(), AppError> {
 
     if doc
         .get("notify")
-        .is_some_and(notify_item_contains_cc_notify)
+        .is_some_and(notify_item_contains_local_ai_gateway)
     {
         doc.remove("notify");
     }
@@ -103,27 +101,27 @@ pub fn uninstall() -> Result<(), AppError> {
 
 #[cfg(test)]
 mod tests {
-    use super::codex_doc_has_cc_notify_hook;
+    use super::codex_doc_has_local_ai_gateway_hook;
 
     #[test]
-    fn detects_cc_notify_in_notify_array() {
+    fn detects_local_ai_gateway_in_notify_array() {
         let doc: toml_edit::DocumentMut =
-            r#"notify = ["/Users/test/.cc-notify/bin/cc-notify", "send", "--event", "stop"]"#
+            r#"notify = ["/Users/test/.local-ai-gateway/bin/local-ai-gateway", "send", "--event", "stop"]"#
                 .parse()
                 .expect("valid toml");
-        assert!(codex_doc_has_cc_notify_hook(&doc));
+        assert!(codex_doc_has_local_ai_gateway_hook(&doc));
     }
 
     #[test]
-    fn ignores_cc_notify_in_unrelated_project_path() {
+    fn ignores_local_ai_gateway_in_unrelated_project_path() {
         let doc: toml_edit::DocumentMut = r#"
             model = "gpt-5.3-codex"
 
-            [projects."/Users/test/repos/cc-notify"]
+            [projects."/Users/test/repos/local-ai-gateway"]
             trust_level = "trusted"
         "#
         .parse()
         .expect("valid toml");
-        assert!(!codex_doc_has_cc_notify_hook(&doc));
+        assert!(!codex_doc_has_local_ai_gateway_hook(&doc));
     }
 }

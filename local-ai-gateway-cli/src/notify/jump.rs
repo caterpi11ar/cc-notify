@@ -12,7 +12,7 @@ fn shell_escape(value: &str) -> String {
 }
 
 fn click_debug_enabled() -> bool {
-    std::env::var_os("CC_NOTIFY_CLICK_DEBUG").is_some()
+    std::env::var_os("LOCAL_AI_GATEWAY_CLICK_DEBUG").is_some()
 }
 
 fn click_debug_log(message: &str) {
@@ -20,7 +20,7 @@ fn click_debug_log(message: &str) {
         return;
     }
     if let Some(home) = dirs::home_dir() {
-        let path = home.join(".cc-notify").join("click-debug.log");
+        let path = home.join(".local-ai-gateway").join("click-debug.log");
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -391,7 +391,10 @@ pub(crate) fn execute_jump_command(command: &str) -> Result<(), String> {
 
     click_debug_log(&format!("jump command exit status={:?}", status.code()));
     if !status.success() {
-        return Err(format!("Jump command exited with status {:?}", status.code()));
+        return Err(format!(
+            "Jump command exited with status {:?}",
+            status.code()
+        ));
     }
 
     Ok(())

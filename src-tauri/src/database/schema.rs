@@ -110,6 +110,68 @@ impl Database {
         )
         .map_err(|e| AppError::Database(e.to_string()))?;
 
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS providers (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                base_url TEXT NOT NULL,
+                protocol TEXT NOT NULL,
+                enabled BOOLEAN NOT NULL DEFAULT 1,
+                default_model TEXT NOT NULL DEFAULT '',
+                models TEXT NOT NULL DEFAULT '[]',
+                model_prefixes TEXT NOT NULL DEFAULT '[]',
+                timeout_ms INTEGER NOT NULL DEFAULT 60000,
+                max_tokens_field TEXT NOT NULL DEFAULT 'max_tokens',
+                secret_ref TEXT,
+                has_api_key BOOLEAN NOT NULL DEFAULT 0,
+                health_status TEXT NOT NULL DEFAULT 'unknown',
+                created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS provider_secrets (
+                secret_ref TEXT PRIMARY KEY,
+                provider_id TEXT NOT NULL,
+                secret TEXT NOT NULL,
+                created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                FOREIGN KEY (provider_id) REFERENCES providers(id) ON DELETE CASCADE
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS gateway_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                time INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                client_type TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                requested_model TEXT NOT NULL DEFAULT '',
+                resolved_provider TEXT,
+                resolved_model TEXT,
+                protocol_in TEXT NOT NULL,
+                protocol_out TEXT,
+                status_code INTEGER NOT NULL,
+                latency_ms INTEGER NOT NULL,
+                stream BOOLEAN NOT NULL DEFAULT 0,
+                token_estimate INTEGER,
+                input_tokens INTEGER,
+                output_tokens INTEGER,
+                total_tokens INTEGER,
+                cache_creation_input_tokens INTEGER,
+                cache_read_input_tokens INTEGER,
+                fidelity_mode TEXT NOT NULL DEFAULT 'strict',
+                error_message TEXT
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
         // Indexes
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_history_created_at ON notification_history(created_at)",
@@ -119,6 +181,12 @@ impl Database {
 
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_history_event_type ON notification_history(event_type_id)",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_gateway_logs_time ON gateway_logs(time)",
             [],
         )
         .map_err(|e| AppError::Database(e.to_string()))?;
@@ -185,11 +253,10 @@ impl Database {
         // v5: Remove sound channel type, simplify voice to notification sound
         if current < 5 {
             // Delete all sound channels (routing cleaned up by ON DELETE CASCADE)
-            conn.execute(
-                "DELETE FROM channels WHERE channel_type = 'sound'",
-                [],
-            )
-            .map_err(|e| AppError::Database(format!("Migration v5 (delete sound channels) failed: {e}")))?;
+            conn.execute("DELETE FROM channels WHERE channel_type = 'sound'", [])
+                .map_err(|e| {
+                    AppError::Database(format!("Migration v5 (delete sound channels) failed: {e}"))
+                })?;
 
             // Update voice channels to simplified config
             conn.execute(
@@ -197,7 +264,9 @@ impl Database {
                  WHERE channel_type = 'voice'",
                 [],
             )
-            .map_err(|e| AppError::Database(format!("Migration v5 (update voice config) failed: {e}")))?;
+            .map_err(|e| {
+                AppError::Database(format!("Migration v5 (update voice config) failed: {e}"))
+            })?;
 
             // Remove obsolete settings
             conn.execute(
@@ -205,6 +274,23 @@ impl Database {
                 [],
             )
             .map_err(|e| AppError::Database(format!("Migration v5 (delete settings) failed: {e}")))?;
+        }
+
+        if current < 6 {
+            Self::create_tables_on_conn(&conn)?;
+        }
+
+        if current < 7 {
+            add_column_if_missing(&conn, "gateway_logs", "input_tokens", "INTEGER")?;
+            add_column_if_missing(&conn, "gateway_logs", "output_tokens", "INTEGER")?;
+            add_column_if_missing(&conn, "gateway_logs", "total_tokens", "INTEGER")?;
+            add_column_if_missing(
+                &conn,
+                "gateway_logs",
+                "cache_creation_input_tokens",
+                "INTEGER",
+            )?;
+            add_column_if_missing(&conn, "gateway_logs", "cache_read_input_tokens", "INTEGER")?;
         }
 
         Self::set_user_version(&conn, SCHEMA_VERSION)?;
@@ -229,14 +315,24 @@ impl Database {
 
         let builtin_events: Vec<(&str, &str, &str, bool)> = vec![
             ("stop", "Task Complete", "claude_hook", true),
-            ("notification.idle_prompt", "Idle Prompt", "claude_hook", true),
+            (
+                "notification.idle_prompt",
+                "Idle Prompt",
+                "claude_hook",
+                true,
+            ),
             (
                 "notification.permission_prompt",
                 "Permission Request",
                 "claude_hook",
                 true,
             ),
-            ("notification.auth_success", "Auth Success", "claude_hook", false),
+            (
+                "notification.auth_success",
+                "Auth Success",
+                "claude_hook",
+                false,
+            ),
             (
                 "notification.elicitation_dialog",
                 "MCP Input",
@@ -350,4 +446,30 @@ impl Database {
 
         Ok(())
     }
+}
+
+fn add_column_if_missing(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    column_type: &str,
+) -> Result<(), AppError> {
+    let mut stmt = conn
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|e| AppError::Database(e.to_string()))?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    if !columns.iter().any(|existing| existing == column) {
+        conn.execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {column_type}"),
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+    }
+
+    Ok(())
 }

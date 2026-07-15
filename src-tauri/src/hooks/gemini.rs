@@ -1,6 +1,6 @@
+use super::{backup_file, get_local_ai_gateway_bin, is_local_ai_gateway_entry, merge_hook_entry};
 use crate::config;
 use crate::error::AppError;
-use super::{get_cc_notify_bin, backup_file, merge_hook_entry, is_cc_notify_entry};
 
 /// Check if Gemini CLI hooks are installed
 pub fn is_installed() -> Result<bool, AppError> {
@@ -10,14 +10,14 @@ pub fn is_installed() -> Result<bool, AppError> {
     }
     let content =
         std::fs::read_to_string(&settings_path).map_err(|e| AppError::io(&settings_path, e))?;
-    Ok(content.contains("cc-notify"))
+    Ok(content.contains("local-ai-gateway"))
 }
 
 /// Install Gemini CLI hooks into ~/.gemini/settings.json
-/// Merges cc-notify entries into existing hooks, preserving user's other hook entries.
+/// Merges local-ai-gateway entries into existing hooks, preserving user's other hook entries.
 pub fn install() -> Result<(), AppError> {
     let settings_path = config::get_gemini_settings_path();
-    let bin = get_cc_notify_bin();
+    let bin = get_local_ai_gateway_bin();
 
     let mut settings: serde_json::Value = if settings_path.exists() {
         backup_file(&settings_path)?;
@@ -34,7 +34,11 @@ pub fn install() -> Result<(), AppError> {
     let hooks = settings.get_mut("hooks").unwrap();
 
     let entries: Vec<(&str, &str, &str)> = vec![
-        ("Notification", "idle_prompt|permission_prompt", "notification"),
+        (
+            "Notification",
+            "idle_prompt|permission_prompt",
+            "notification",
+        ),
         ("AfterAgent", "", "stop"),
     ];
 
@@ -50,15 +54,12 @@ pub fn install() -> Result<(), AppError> {
     }
 
     config::write_json_file(&settings_path, &settings)?;
-    log::info!(
-        "Gemini CLI hooks installed at {}",
-        settings_path.display()
-    );
+    log::info!("Gemini CLI hooks installed at {}", settings_path.display());
     Ok(())
 }
 
 /// Uninstall Gemini CLI hooks from ~/.gemini/settings.json
-/// Only removes cc-notify entries, preserving user's other hook entries.
+/// Only removes local-ai-gateway entries, preserving user's other hook entries.
 pub fn uninstall() -> Result<(), AppError> {
     let settings_path = config::get_gemini_settings_path();
     if !settings_path.exists() {
@@ -73,7 +74,7 @@ pub fn uninstall() -> Result<(), AppError> {
         let keys: Vec<String> = hooks.keys().cloned().collect();
         for key in &keys {
             if let Some(arr) = hooks.get_mut(key).and_then(|v| v.as_array_mut()) {
-                arr.retain(|entry| !is_cc_notify_entry(entry));
+                arr.retain(|entry| !is_local_ai_gateway_entry(entry));
             }
         }
 

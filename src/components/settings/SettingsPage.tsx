@@ -208,7 +208,7 @@ export function SettingsPage() {
     setUpdateStatus("checking");
     try {
       const res = await fetch(
-        "https://api.github.com/repos/caterpi11ar/cc-notify/releases/latest",
+        "https://api.github.com/repos/caterpi11ar/local-ai-gateway/releases/latest",
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -236,12 +236,12 @@ export function SettingsPage() {
 
   const handleOpenRelease = () => {
     openUrl(
-      `https://github.com/caterpi11ar/cc-notify/releases/tag/v${latestVersion}`,
+      `https://github.com/caterpi11ar/local-ai-gateway/releases/tag/v${latestVersion}`,
     );
   };
 
   const handleOpenGithub = () => {
-    openUrl("https://github.com/caterpi11ar/cc-notify");
+    openUrl("https://github.com/caterpi11ar/local-ai-gateway");
   };
 
   if (settingsLoading) {

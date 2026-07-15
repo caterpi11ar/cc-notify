@@ -1,6 +1,6 @@
-use tauri::State;
-use crate::store::AppState;
 use crate::models::Rule;
+use crate::store::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_rules(state: State<'_, AppState>) -> Result<Vec<Rule>, String> {

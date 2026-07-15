@@ -1,14 +1,14 @@
 [package]
-name = "cc-notify-cli"
+name = "local-ai-gateway-cli"
 version = "0.2.5"
-description = "CLI for CC Notify - send notifications from AI CLI tool hooks"
-authors = ["CC-Notify Team"]
+description = "CLI for Local AI Gateway"
+authors = ["Local AI Gateway Team"]
 license = "MIT"
 edition = "2021"
 rust-version = "1.85.0"
 
 [[bin]]
-name = "cc-notify"
+name = "local-ai-gateway"
 path = "src/main.rs"
 
 [dependencies]

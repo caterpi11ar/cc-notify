@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light;
+  font-family:
+    ui-sans-serif,
+    "SF Pro Text",
+    "Segoe UI",
+    sans-serif;
+  background: #eef3f0;
+  color: #10201a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(236, 247, 241, 0.92), rgba(247, 250, 252, 0.95)),
+    repeating-linear-gradient(90deg, rgba(16, 32, 26, 0.04) 0 1px, transparent 1px 72px);
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}

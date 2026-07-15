@@ -1,22 +1,26 @@
 use std::path::PathBuf;
 
-/// Get the cc-notify binary path for hooks.
-/// Priority: 1) app-installed (~/.cc-notify/bin/), 2) PATH lookup, 3) current_exe() fallback
-fn get_cc_notify_bin() -> String {
+/// Get the local-ai-gateway binary path for hooks.
+/// Priority: 1) app-installed (~/.local-ai-gateway/bin/), 2) PATH lookup, 3) current_exe() fallback
+fn get_local_ai_gateway_bin() -> String {
     // 1. Check the app-installed location
     let installed = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".cc-notify")
+        .join(".local-ai-gateway")
         .join("bin")
-        .join(if cfg!(windows) { "cc-notify.exe" } else { "cc-notify" });
+        .join(if cfg!(windows) {
+            "local-ai-gateway.exe"
+        } else {
+            "local-ai-gateway"
+        });
     if installed.exists() {
         return installed.display().to_string();
     }
 
-    // 2. Try to find cc-notify in PATH
+    // 2. Try to find local-ai-gateway in PATH
     let which_cmd = if cfg!(windows) { "where" } else { "which" };
     if let Ok(output) = std::process::Command::new(which_cmd)
-        .arg("cc-notify")
+        .arg("local-ai-gateway")
         .output()
     {
         if output.status.success() {
@@ -27,7 +31,7 @@ fn get_cc_notify_bin() -> String {
     // 3. Fall back to the current binary path
     std::env::current_exe()
         .map(|p| p.display().to_string())
-        .unwrap_or_else(|_| "cc-notify".to_string())
+        .unwrap_or_else(|_| "local-ai-gateway".to_string())
 }
 
 fn get_claude_settings_path() -> PathBuf {
@@ -54,7 +58,7 @@ fn get_gemini_settings_path() -> PathBuf {
 fn get_backups_dir() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".cc-notify")
+        .join(".local-ai-gateway")
         .join("backups")
 }
 
@@ -87,26 +91,24 @@ fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), String> {
     let parent = path
         .parent()
         .ok_or_else(|| "No parent directory".to_string())?;
-    std::fs::create_dir_all(parent)
-        .map_err(|e| format!("Failed to create directory: {e}"))?;
+    std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {e}"))?;
 
     let tmp = tempfile::NamedTempFile::new_in(parent)
         .map_err(|e| format!("Failed to create temp file: {e}"))?;
-    std::fs::write(tmp.path(), content)
-        .map_err(|e| format!("Failed to write temp file: {e}"))?;
+    std::fs::write(tmp.path(), content).map_err(|e| format!("Failed to write temp file: {e}"))?;
     tmp.persist(path)
         .map_err(|e| format!("Failed to rename temp file: {e}"))?;
 
     Ok(())
 }
 
-/// Check if a hook entry's command contains "cc-notify"
-fn is_cc_notify_entry(entry: &serde_json::Value) -> bool {
+/// Check if a hook entry's command contains "local-ai-gateway"
+fn is_local_ai_gateway_entry(entry: &serde_json::Value) -> bool {
     if let Some(hooks) = entry.get("hooks").and_then(|h| h.as_array()) {
         hooks.iter().any(|hook| {
             hook.get("command")
                 .and_then(|c| c.as_str())
-                .map(|c| c.contains("cc-notify"))
+                .map(|c| c.contains("local-ai-gateway"))
                 .unwrap_or(false)
         })
     } else {
@@ -114,13 +116,9 @@ fn is_cc_notify_entry(entry: &serde_json::Value) -> bool {
     }
 }
 
-/// Merge a cc-notify hook entry into a specific event type array within hooks.
-/// If an existing cc-notify entry is found, it is replaced; otherwise the new entry is appended.
-fn merge_hook_entry(
-    hooks: &mut serde_json::Value,
-    event_name: &str,
-    entry: serde_json::Value,
-) {
+/// Merge a local-ai-gateway hook entry into a specific event type array within hooks.
+/// If an existing local-ai-gateway entry is found, it is replaced; otherwise the new entry is appended.
+fn merge_hook_entry(hooks: &mut serde_json::Value, event_name: &str, entry: serde_json::Value) {
     let arr = hooks
         .as_object_mut()
         .unwrap()
@@ -129,20 +127,20 @@ fn merge_hook_entry(
         .as_array_mut()
         .unwrap();
 
-    if let Some(pos) = arr.iter().position(|e| is_cc_notify_entry(e)) {
+    if let Some(pos) = arr.iter().position(|e| is_local_ai_gateway_entry(e)) {
         arr[pos] = entry;
     } else {
         arr.push(entry);
     }
 }
 
-/// Selectively remove cc-notify entries from a hooks JSON object.
+/// Selectively remove local-ai-gateway entries from a hooks JSON object.
 /// Cleans up empty arrays and returns whether hooks object is now empty.
-fn remove_cc_notify_from_hooks(hooks: &mut serde_json::Map<String, serde_json::Value>) {
+fn remove_local_ai_gateway_from_hooks(hooks: &mut serde_json::Map<String, serde_json::Value>) {
     let keys: Vec<String> = hooks.keys().cloned().collect();
     for key in &keys {
         if let Some(arr) = hooks.get_mut(key).and_then(|v| v.as_array_mut()) {
-            arr.retain(|entry| !is_cc_notify_entry(entry));
+            arr.retain(|entry| !is_local_ai_gateway_entry(entry));
         }
     }
 
@@ -157,27 +155,25 @@ fn remove_cc_notify_from_hooks(hooks: &mut serde_json::Map<String, serde_json::V
     }
 }
 
-fn value_contains_cc_notify(value: &toml_edit::Value) -> bool {
+fn value_contains_local_ai_gateway(value: &toml_edit::Value) -> bool {
     if let Some(s) = value.as_str() {
-        return s.contains("cc-notify");
+        return s.contains("local-ai-gateway");
     }
 
-    value
-        .as_array()
-        .is_some_and(|arr| {
-            arr.iter()
-                .filter_map(|value| value.as_str())
-                .any(|s| s.contains("cc-notify"))
-        })
+    value.as_array().is_some_and(|arr| {
+        arr.iter()
+            .filter_map(|value| value.as_str())
+            .any(|s| s.contains("local-ai-gateway"))
+    })
 }
 
-fn notify_item_contains_cc_notify(item: &toml_edit::Item) -> bool {
-    item.as_value().is_some_and(value_contains_cc_notify)
+fn notify_item_contains_local_ai_gateway(item: &toml_edit::Item) -> bool {
+    item.as_value().is_some_and(value_contains_local_ai_gateway)
 }
 
-fn codex_doc_has_cc_notify_hook(doc: &toml_edit::DocumentMut) -> bool {
+fn codex_doc_has_local_ai_gateway_hook(doc: &toml_edit::DocumentMut) -> bool {
     doc.get("notify")
-        .is_some_and(notify_item_contains_cc_notify)
+        .is_some_and(notify_item_contains_local_ai_gateway)
 }
 
 /// Install hooks for specified tool(s)
@@ -204,7 +200,9 @@ pub fn install(tool: &str) -> Result<(), String> {
                 Err(errors.join("\n"))
             }
         }
-        _ => Err(format!("Unknown tool: {tool}. Use: claude, codex, gemini, or all")),
+        _ => Err(format!(
+            "Unknown tool: {tool}. Use: claude, codex, gemini, or all"
+        )),
     }
 }
 
@@ -233,7 +231,7 @@ pub fn status() -> Result<(), String> {
     let claude_path = get_claude_settings_path();
     let claude_installed = if claude_path.exists() {
         let content = std::fs::read_to_string(&claude_path).unwrap_or_default();
-        content.contains("cc-notify")
+        content.contains("local-ai-gateway")
     } else {
         false
     };
@@ -252,7 +250,7 @@ pub fn status() -> Result<(), String> {
         let content = std::fs::read_to_string(&codex_path).unwrap_or_default();
         content
             .parse::<toml_edit::DocumentMut>()
-            .map(|doc| codex_doc_has_cc_notify_hook(&doc))
+            .map(|doc| codex_doc_has_local_ai_gateway_hook(&doc))
             .unwrap_or(false)
     } else {
         false
@@ -270,7 +268,7 @@ pub fn status() -> Result<(), String> {
     let gemini_path = get_gemini_settings_path();
     let gemini_installed = if gemini_path.exists() {
         let content = std::fs::read_to_string(&gemini_path).unwrap_or_default();
-        content.contains("cc-notify")
+        content.contains("local-ai-gateway")
     } else {
         false
     };
@@ -289,12 +287,20 @@ pub fn status() -> Result<(), String> {
 /// Send a test hooks event
 pub fn test() -> Result<(), String> {
     println!("Sending test notification...");
-    let bin = get_cc_notify_bin();
+    let bin = get_local_ai_gateway_bin();
 
     let output = std::process::Command::new(&bin)
-        .args(["send", "--event", "test", "--message", "Hooks test notification", "--tool", "cc-notify"])
+        .args([
+            "send",
+            "--event",
+            "test",
+            "--message",
+            "Hooks test notification",
+            "--tool",
+            "local-ai-gateway",
+        ])
         .output()
-        .map_err(|e| format!("Failed to run cc-notify: {e}"))?;
+        .map_err(|e| format!("Failed to run local-ai-gateway: {e}"))?;
 
     if output.status.success() {
         println!("Test notification sent successfully");
@@ -312,7 +318,7 @@ pub fn test() -> Result<(), String> {
 
 fn install_claude_hooks() -> Result<(), String> {
     let settings_path = get_claude_settings_path();
-    let bin = get_cc_notify_bin();
+    let bin = get_local_ai_gateway_bin();
 
     // Read existing settings or create empty
     let mut settings: serde_json::Value = if settings_path.exists() {
@@ -334,7 +340,11 @@ fn install_claude_hooks() -> Result<(), String> {
 
     let entries: Vec<(&str, &str, &str)> = vec![
         ("Stop", "", "stop"),
-        ("Notification", "idle_prompt|permission_prompt|auth_success|elicitation_dialog", "notification"),
+        (
+            "Notification",
+            "idle_prompt|permission_prompt|auth_success|elicitation_dialog",
+            "notification",
+        ),
         ("SubagentStop", "", "subagent-stop"),
         ("SessionStart", "", "session-start"),
         ("SessionEnd", "", "session-end"),
@@ -369,11 +379,11 @@ fn uninstall_claude_hooks() -> Result<(), String> {
 
     let content = std::fs::read_to_string(&settings_path)
         .map_err(|e| format!("Failed to read settings: {e}"))?;
-    let mut settings: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse settings: {e}"))?;
+    let mut settings: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {e}"))?;
 
     if let Some(hooks) = settings.get_mut("hooks").and_then(|h| h.as_object_mut()) {
-        remove_cc_notify_from_hooks(hooks);
+        remove_local_ai_gateway_from_hooks(hooks);
 
         if hooks.is_empty() {
             if let Some(obj) = settings.as_object_mut() {
@@ -396,7 +406,7 @@ fn uninstall_claude_hooks() -> Result<(), String> {
 
 fn install_codex_hooks() -> Result<(), String> {
     let config_path = get_codex_config_path();
-    let bin = get_cc_notify_bin();
+    let bin = get_local_ai_gateway_bin();
 
     // Read existing config or create empty
     let content = if config_path.exists() {
@@ -437,16 +447,16 @@ fn uninstall_codex_hooks() -> Result<(), String> {
 
     backup_file(&config_path)?;
 
-    let content = std::fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read config: {e}"))?;
+    let content =
+        std::fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config: {e}"))?;
     let mut doc: toml_edit::DocumentMut = content
         .parse()
         .map_err(|e| format!("Failed to parse config: {e}"))?;
 
-    // Only remove notify if it contains cc-notify
+    // Only remove notify if it contains local-ai-gateway
     if doc
         .get("notify")
-        .is_some_and(notify_item_contains_cc_notify)
+        .is_some_and(notify_item_contains_local_ai_gateway)
     {
         doc.remove("notify");
     }
@@ -462,7 +472,7 @@ fn uninstall_codex_hooks() -> Result<(), String> {
 
 fn install_gemini_hooks() -> Result<(), String> {
     let settings_path = get_gemini_settings_path();
-    let bin = get_cc_notify_bin();
+    let bin = get_local_ai_gateway_bin();
 
     let mut settings: serde_json::Value = if settings_path.exists() {
         backup_file(&settings_path)?;
@@ -482,7 +492,11 @@ fn install_gemini_hooks() -> Result<(), String> {
     let hooks = settings.get_mut("hooks").unwrap();
 
     let entries: Vec<(&str, &str, &str)> = vec![
-        ("Notification", "idle_prompt|permission_prompt", "notification"),
+        (
+            "Notification",
+            "idle_prompt|permission_prompt",
+            "notification",
+        ),
         ("AfterAgent", "", "stop"),
     ];
 
@@ -515,11 +529,11 @@ fn uninstall_gemini_hooks() -> Result<(), String> {
 
     let content = std::fs::read_to_string(&settings_path)
         .map_err(|e| format!("Failed to read settings: {e}"))?;
-    let mut settings: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse settings: {e}"))?;
+    let mut settings: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {e}"))?;
 
     if let Some(hooks) = settings.get_mut("hooks").and_then(|h| h.as_object_mut()) {
-        remove_cc_notify_from_hooks(hooks);
+        remove_local_ai_gateway_from_hooks(hooks);
 
         if hooks.is_empty() {
             if let Some(obj) = settings.as_object_mut() {
@@ -538,27 +552,27 @@ fn uninstall_gemini_hooks() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::codex_doc_has_cc_notify_hook;
+    use super::codex_doc_has_local_ai_gateway_hook;
 
     #[test]
-    fn detects_cc_notify_in_notify_array() {
+    fn detects_local_ai_gateway_in_notify_array() {
         let doc: toml_edit::DocumentMut =
-            r#"notify = ["/Users/test/.cc-notify/bin/cc-notify", "send", "--event", "stop"]"#
+            r#"notify = ["/Users/test/.local-ai-gateway/bin/local-ai-gateway", "send", "--event", "stop"]"#
                 .parse()
                 .expect("valid toml");
-        assert!(codex_doc_has_cc_notify_hook(&doc));
+        assert!(codex_doc_has_local_ai_gateway_hook(&doc));
     }
 
     #[test]
-    fn ignores_cc_notify_in_unrelated_project_path() {
+    fn ignores_local_ai_gateway_in_unrelated_project_path() {
         let doc: toml_edit::DocumentMut = r#"
             model = "gpt-5.3-codex"
 
-            [projects."/Users/test/repos/cc-notify"]
+            [projects."/Users/test/repos/local-ai-gateway"]
             trust_level = "trusted"
         "#
         .parse()
         .expect("valid toml");
-        assert!(!codex_doc_has_cc_notify_hook(&doc));
+        assert!(!codex_doc_has_local_ai_gateway_hook(&doc));
     }
 }

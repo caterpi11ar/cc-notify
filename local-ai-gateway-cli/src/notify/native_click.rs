@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 const DEFAULT_CLICK_WORKER_TIMEOUT_SECONDS: u64 = 180;
 
 fn click_debug_enabled() -> bool {
-    std::env::var_os("CC_NOTIFY_CLICK_DEBUG").is_some()
+    std::env::var_os("LOCAL_AI_GATEWAY_CLICK_DEBUG").is_some()
 }
 
 fn click_debug_log(message: &str) {
@@ -15,7 +15,7 @@ fn click_debug_log(message: &str) {
         return;
     }
     if let Some(home) = dirs::home_dir() {
-        let path = home.join(".cc-notify").join("click-debug.log");
+        let path = home.join(".local-ai-gateway").join("click-debug.log");
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -35,7 +35,7 @@ fn click_debug_log(message: &str) {
 }
 
 fn click_worker_timeout_seconds() -> u64 {
-    std::env::var("CC_NOTIFY_NATIVE_CLICK_TIMEOUT_SECONDS")
+    std::env::var("LOCAL_AI_GATEWAY_NATIVE_CLICK_TIMEOUT_SECONDS")
         .ok()
         .and_then(|raw| raw.trim().parse::<u64>().ok())
         .filter(|value| *value > 0)
@@ -46,7 +46,7 @@ fn click_worker_timeout_seconds() -> u64 {
 fn current_launchctl_service_label() -> Option<String> {
     std::env::var("XPC_SERVICE_NAME")
         .ok()
-        .filter(|label| label.starts_with("com.ccnotify.native-click-worker."))
+        .filter(|label| label.starts_with("com.local-ai-gateway.native-click-worker."))
 }
 
 #[cfg(target_os = "macos")]
@@ -99,10 +99,10 @@ fn send_native_notification_with_action(
 #[cfg(target_os = "macos")]
 fn spawn_native_click_worker(summary: &str, body: &str, jump_command: &str) -> Result<(), String> {
     let exe = std::env::current_exe()
-        .map_err(|e| format!("Failed to locate cc-notify executable: {e}"))?;
+        .map_err(|e| format!("Failed to locate local-ai-gateway executable: {e}"))?;
     let timeout_seconds = click_worker_timeout_seconds();
     let label = format!(
-        "com.ccnotify.native-click-worker.{}.{}",
+        "com.local-ai-gateway.native-click-worker.{}.{}",
         std::process::id(),
         chrono::Utc::now().timestamp_millis()
     );
@@ -112,13 +112,11 @@ fn spawn_native_click_worker(summary: &str, body: &str, jump_command: &str) -> R
     ));
 
     let mut cmd = Command::new("launchctl");
-    cmd.arg("submit")
-        .arg("-l")
-        .arg(&label)
-        .arg("--");
+    cmd.arg("submit").arg("-l").arg(&label).arg("--");
 
     if click_debug_enabled() {
-        cmd.arg("/usr/bin/env").arg("CC_NOTIFY_CLICK_DEBUG=1");
+        cmd.arg("/usr/bin/env")
+            .arg("LOCAL_AI_GATEWAY_CLICK_DEBUG=1");
     }
 
     cmd.arg(exe)
@@ -152,7 +150,7 @@ fn spawn_native_click_worker(summary: &str, body: &str, jump_command: &str) -> R
 #[cfg(all(unix, not(target_os = "macos")))]
 fn spawn_native_click_worker(summary: &str, body: &str, jump_command: &str) -> Result<(), String> {
     let exe = std::env::current_exe()
-        .map_err(|e| format!("Failed to locate cc-notify executable: {e}"))?;
+        .map_err(|e| format!("Failed to locate local-ai-gateway executable: {e}"))?;
     let timeout_seconds = click_worker_timeout_seconds();
     click_debug_log(&format!(
         "spawn worker timeout={} summary={:?} jump_command={:?}",
@@ -185,8 +183,8 @@ pub fn run_native_click_worker(
 ) -> Result<(), String> {
     use mac_notification_sys::{MainButton, Notification, NotificationResponse};
     use std::sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     };
     use std::time::Duration;
 

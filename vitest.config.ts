@@ -14,7 +14,7 @@ export default defineConfig({
     setupFiles: ["./tests/setupGlobals.ts", "./tests/setupTests.ts"],
     globals: true,
     include: ["tests/**/*.test.{ts,tsx}"],
-    exclude: ["cc-switch/**", "cc-notify-cli/**", "code-notify/**", "node_modules/**"],
+    exclude: ["cc-switch/**", "local-ai-gateway-cli/**", "code-notify/**", "node_modules/**"],
     coverage: {
       reporter: ["text", "lcov"],
     },

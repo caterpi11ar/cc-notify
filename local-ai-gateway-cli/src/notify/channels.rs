@@ -350,7 +350,7 @@ fn send_generic_webhook(
 
 /// Play a notification sound file.
 /// Reads `config["sound_file"]` (default "default.mp3") and `config["volume"]`.
-/// Relative paths are resolved under `~/.cc-notify/sounds/`.
+/// Relative paths are resolved under `~/.local-ai-gateway/sounds/`.
 fn play_notification_sound(config: &serde_json::Value) -> Result<(), String> {
     let sound_file = config["sound_file"]
         .as_str()
@@ -359,13 +359,13 @@ fn play_notification_sound(config: &serde_json::Value) -> Result<(), String> {
 
     let volume = config["volume"].as_f64();
 
-    // Resolve path: absolute paths used as-is, otherwise look in ~/.cc-notify/sounds/
+    // Resolve path: absolute paths used as-is, otherwise look in ~/.local-ai-gateway/sounds/
     let file_path = if Path::new(sound_file).is_absolute() {
         std::path::PathBuf::from(sound_file)
     } else {
         dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".cc-notify")
+            .join(".local-ai-gateway")
             .join("sounds")
             .join(sound_file)
     };

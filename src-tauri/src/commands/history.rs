@@ -1,6 +1,6 @@
-use tauri::State;
-use crate::store::AppState;
 use crate::models::NotificationHistory;
+use crate::store::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_history(
@@ -10,7 +10,10 @@ pub fn get_history(
 ) -> Result<Vec<NotificationHistory>, String> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
-    state.db.get_history(limit, offset).map_err(|e| e.to_string())
+    state
+        .db
+        .get_history(limit, offset)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

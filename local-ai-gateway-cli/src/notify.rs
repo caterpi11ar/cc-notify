@@ -193,7 +193,7 @@ fn send_to_routed_channels(
     Ok(())
 }
 
-/// Send a notification through the cc-notify pipeline.
+/// Send a notification through the local-ai-gateway pipeline.
 pub fn send_notification(db_path: &Path, ctx: &NotificationContext) -> Result<(), String> {
     // Check kill switch
     let kill_switch_path = kill_switch_path(db_path);

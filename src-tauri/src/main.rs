@@ -9,5 +9,5 @@ fn main() {
         }
     }
 
-    cc_notify_lib::run();
+    local_ai_gateway_lib::run();
 }

@@ -149,7 +149,7 @@ pub(crate) fn build_send_context(
     let resolved_terminal_jump_command = first_non_empty(vec![
         terminal_jump_command,
         stdin.terminal_jump_command.clone(),
-        env_first(&["CC_NOTIFY_TERMINAL_JUMP_CMD"]),
+        env_first(&["LOCAL_AI_GATEWAY_TERMINAL_JUMP_CMD"]),
     ]);
     let metadata = build_metadata(metadata, resolved_session_id.as_deref(), stdin, &terminal);
 

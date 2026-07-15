@@ -1,5 +1,6 @@
 pub(crate) mod channels;
 pub(crate) mod event_types;
+pub(crate) mod gateway;
 pub(crate) mod history;
 pub(crate) mod routing;
 pub(crate) mod rules;

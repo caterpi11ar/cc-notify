@@ -1,6 +1,6 @@
-use tauri::State;
-use crate::store::AppState;
 use crate::models::EventType;
+use crate::store::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_event_types(state: State<'_, AppState>) -> Result<Vec<EventType>, String> {

@@ -10,7 +10,7 @@ mod notify;
 
 /// CC Notify CLI - Notification manager for AI CLI tools
 #[derive(Parser)]
-#[command(name = "cc-notify", version, about)]
+#[command(name = "local-ai-gateway", version, about)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -185,14 +185,14 @@ fn read_stdin_hook_input() -> HookInput {
 fn get_db_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".cc-notify")
-        .join("cc-notify.db")
+        .join(".local-ai-gateway")
+        .join("local-ai-gateway.db")
 }
 
 fn get_kill_switch_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".cc-notify")
+        .join(".local-ai-gateway")
         .join("disabled")
 }
 
@@ -331,7 +331,7 @@ fn main() {
                 event: "test".to_string(),
                 notification_type: None,
                 message: Some("This is a test notification from CC Notify".to_string()),
-                tool: "cc-notify".to_string(),
+                tool: "local-ai-gateway".to_string(),
                 session_id: None,
                 project: None,
                 cwd: None,

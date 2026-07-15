@@ -3,9 +3,10 @@ mod commands;
 mod config;
 mod database;
 mod error;
+mod gateway;
 mod hooks;
 mod models;
-mod presets;
+mod protocol;
 mod store;
 mod tray;
 
@@ -34,10 +35,10 @@ pub fn run() {
             }
         }))
         .setup(|app| {
-            // Auto-install CLI binary to ~/.cc-notify/bin/
+            // Auto-install CLI binary to ~/.local-ai-gateway/bin/
             cli_installer::install_cli(app);
 
-            // Auto-install sound files to ~/.cc-notify/sounds/
+            // Auto-install sound files to ~/.local-ai-gateway/sounds/
             cli_installer::install_sounds(app);
 
             let db = Database::init().map_err(|e| {
@@ -99,6 +100,17 @@ pub fn run() {
             commands::hooks::get_hooks_status,
             commands::hooks::install_hook,
             commands::hooks::uninstall_hook,
+            // Gateway commands
+            commands::gateway::get_gateway_status,
+            commands::gateway::start_gateway,
+            commands::gateway::stop_gateway,
+            commands::gateway::restart_gateway,
+            commands::gateway::get_local_api_key_status,
+            commands::gateway::regenerate_local_api_key,
+            commands::gateway::get_local_api_key_once,
+            commands::gateway::get_providers,
+            commands::gateway::get_gateway_logs,
+            commands::gateway::clear_gateway_logs,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

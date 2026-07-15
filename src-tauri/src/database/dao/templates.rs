@@ -95,10 +95,7 @@ impl Database {
     }
 
     /// Get default template for a channel type
-    pub fn get_default_template(
-        &self,
-        channel_type: &str,
-    ) -> Result<Option<Template>, AppError> {
+    pub fn get_default_template(&self, channel_type: &str) -> Result<Option<Template>, AppError> {
         let conn = lock_conn!(self.conn);
         let mut stmt = conn
             .prepare(

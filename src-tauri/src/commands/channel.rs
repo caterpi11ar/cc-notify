@@ -1,6 +1,6 @@
-use tauri::State;
-use crate::store::AppState;
 use crate::models::{Channel, SendResult};
+use crate::store::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_channels(state: State<'_, AppState>) -> Result<Vec<Channel>, String> {
@@ -61,10 +61,7 @@ pub fn delete_channel(state: State<'_, AppState>, id: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub async fn test_channel(
-    _state: State<'_, AppState>,
-    id: String,
-) -> Result<SendResult, String> {
+pub async fn test_channel(_state: State<'_, AppState>, id: String) -> Result<SendResult, String> {
     let cli_path = crate::config::get_cli_bin_path();
 
     if !cli_path.exists() {
@@ -74,10 +71,14 @@ pub async fn test_channel(
     let output = tokio::process::Command::new(&cli_path)
         .args([
             "send",
-            "--event", "test",
-            "--tool", "cc-notify",
-            "--message", "Test notification from CC Notify",
-            "--channel-id", &id,
+            "--event",
+            "test",
+            "--tool",
+            "local-ai-gateway",
+            "--message",
+            "Test notification from CC Notify",
+            "--channel-id",
+            &id,
         ])
         .output()
         .await
@@ -93,6 +94,10 @@ pub async fn test_channel(
     Ok(SendResult {
         success,
         channel_type: String::new(),
-        message: if message.is_empty() { None } else { Some(message) },
+        message: if message.is_empty() {
+            None
+        } else {
+            Some(message)
+        },
     })
 }

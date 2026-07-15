@@ -6,8 +6,8 @@ use tauri::Manager;
 use crate::config;
 
 /// Install bundled CLI binary on app startup:
-/// - versioned binary at ~/.cc-notify/bin/cc-notify-<version>
-/// - compatibility binary at ~/.cc-notify/bin/cc-notify
+/// - versioned binary at ~/.local-ai-gateway/bin/local-ai-gateway-<version>
+/// - compatibility binary at ~/.local-ai-gateway/bin/local-ai-gateway
 /// This is non-fatal: errors are logged but do not prevent the app from starting.
 pub fn install_cli(app: &tauri::App) {
     if let Err(e) = try_install_cli(app) {
@@ -15,7 +15,7 @@ pub fn install_cli(app: &tauri::App) {
     }
 }
 
-/// Install bundled sound files to ~/.cc-notify/sounds/ on app startup.
+/// Install bundled sound files to ~/.local-ai-gateway/sounds/ on app startup.
 /// This is non-fatal: errors are logged but do not prevent the app from starting.
 pub fn install_sounds(app: &tauri::App) {
     if let Err(e) = try_install_sounds(app) {
@@ -24,12 +24,17 @@ pub fn install_sounds(app: &tauri::App) {
 }
 
 fn try_install_cli(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let bin_name = if cfg!(windows) { "cc-notify.exe" } else { "cc-notify" };
+    let bin_name = if cfg!(windows) {
+        "local-ai-gateway.exe"
+    } else {
+        "local-ai-gateway"
+    };
 
     // Resolve the bundled resource
-    let resource_path = app
-        .path()
-        .resolve(format!("resources/{bin_name}"), tauri::path::BaseDirectory::Resource)?;
+    let resource_path = app.path().resolve(
+        format!("resources/{bin_name}"),
+        tauri::path::BaseDirectory::Resource,
+    )?;
 
     if !resource_path.exists() {
         return Err(format!("Bundled CLI not found at {}", resource_path.display()).into());
@@ -76,7 +81,9 @@ fn try_install_cli(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn cleanup_old_versioned_cli_bins(current_versioned_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn cleanup_old_versioned_cli_bins(
+    current_versioned_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     let Some(bin_dir) = current_versioned_path.parent() else {
         return Ok(());
     };
@@ -115,7 +122,7 @@ fn cleanup_old_versioned_cli_bins(current_versioned_path: &Path) -> Result<(), B
 }
 
 fn parse_versioned_cli_name(name: &str) -> Option<&str> {
-    let suffix = name.strip_prefix("cc-notify-")?;
+    let suffix = name.strip_prefix("local-ai-gateway-")?;
     let version = if cfg!(windows) {
         suffix.strip_suffix(".exe")?
     } else {
@@ -139,9 +146,10 @@ fn parse_versioned_cli_name(name: &str) -> Option<&str> {
 }
 
 fn try_install_sounds(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let resource_path = app
-        .path()
-        .resolve("resources/sounds/default.mp3", tauri::path::BaseDirectory::Resource)?;
+    let resource_path = app.path().resolve(
+        "resources/sounds/default.mp3",
+        tauri::path::BaseDirectory::Resource,
+    )?;
 
     if !resource_path.exists() {
         return Err(format!("Bundled sound not found at {}", resource_path.display()).into());
@@ -175,18 +183,21 @@ mod tests {
     fn parses_versioned_cli_name() {
         if cfg!(windows) {
             assert_eq!(
-                parse_versioned_cli_name("cc-notify-0.2.3.exe"),
+                parse_versioned_cli_name("local-ai-gateway-0.2.3.exe"),
                 Some("0.2.3")
             );
         } else {
-            assert_eq!(parse_versioned_cli_name("cc-notify-0.2.3"), Some("0.2.3"));
+            assert_eq!(
+                parse_versioned_cli_name("local-ai-gateway-0.2.3"),
+                Some("0.2.3")
+            );
         }
     }
 
     #[test]
     fn rejects_non_versioned_or_invalid_names() {
-        assert_eq!(parse_versioned_cli_name("cc-notify"), None);
-        assert_eq!(parse_versioned_cli_name("cc-notify-"), None);
-        assert_eq!(parse_versioned_cli_name("cc-notify-???"), None);
+        assert_eq!(parse_versioned_cli_name("local-ai-gateway"), None);
+        assert_eq!(parse_versioned_cli_name("local-ai-gateway-"), None);
+        assert_eq!(parse_versioned_cli_name("local-ai-gateway-???"), None);
     }
 }

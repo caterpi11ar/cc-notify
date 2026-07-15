@@ -2,6 +2,7 @@
 
 pub mod channel;
 pub mod event_type;
+pub mod gateway;
 pub mod history;
 pub mod hooks;
 pub mod routing;

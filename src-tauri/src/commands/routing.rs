@@ -1,6 +1,6 @@
-use tauri::State;
-use crate::store::AppState;
 use crate::models::Routing;
+use crate::store::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_routings(state: State<'_, AppState>) -> Result<Vec<Routing>, String> {

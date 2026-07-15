@@ -1,6 +1,6 @@
-use tauri::State;
-use crate::store::AppState;
 use crate::models::Template;
+use crate::store::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_templates(state: State<'_, AppState>) -> Result<Vec<Template>, String> {
@@ -8,10 +8,7 @@ pub fn get_templates(state: State<'_, AppState>) -> Result<Vec<Template>, String
 }
 
 #[tauri::command]
-pub fn create_template(
-    state: State<'_, AppState>,
-    template: Template,
-) -> Result<Template, String> {
+pub fn create_template(state: State<'_, AppState>, template: Template) -> Result<Template, String> {
     let mut t = template;
     if t.id.is_empty() {
         t.id = uuid::Uuid::new_v4().to_string();

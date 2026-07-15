@@ -6,19 +6,19 @@ use crate::config;
 use crate::error::AppError;
 use crate::models::HooksStatus;
 
-/// Get the cc-notify CLI binary path for hooks commands.
-/// Priority: 1) app-installed (~/.cc-notify/bin/), 2) PATH lookup, 3) bare fallback
-pub(crate) fn get_cc_notify_bin() -> String {
+/// Get the local-ai-gateway CLI binary path for hooks commands.
+/// Priority: 1) app-installed (~/.local-ai-gateway/bin/), 2) PATH lookup, 3) bare fallback
+pub(crate) fn get_local_ai_gateway_bin() -> String {
     // 1. Check the app-installed location
     let installed = config::get_cli_bin_path();
     if installed.exists() {
         return installed.display().to_string();
     }
 
-    // 2. Try to find cc-notify in PATH
+    // 2. Try to find local-ai-gateway in PATH
     let which_cmd = if cfg!(windows) { "where" } else { "which" };
     if let Ok(output) = std::process::Command::new(which_cmd)
-        .arg("cc-notify")
+        .arg("local-ai-gateway")
         .output()
     {
         if output.status.success() {
@@ -27,7 +27,7 @@ pub(crate) fn get_cc_notify_bin() -> String {
     }
 
     // 3. Fall back to bare name
-    "cc-notify".to_string()
+    "local-ai-gateway".to_string()
 }
 
 /// Backup a config file before modification
@@ -51,13 +51,13 @@ pub(crate) fn backup_file(path: &std::path::Path) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Check if a hook entry's command contains "cc-notify"
-pub(crate) fn is_cc_notify_entry(entry: &serde_json::Value) -> bool {
+/// Check if a hook entry's command contains "local-ai-gateway"
+pub(crate) fn is_local_ai_gateway_entry(entry: &serde_json::Value) -> bool {
     if let Some(hooks) = entry.get("hooks").and_then(|h| h.as_array()) {
         hooks.iter().any(|hook| {
             hook.get("command")
                 .and_then(|c| c.as_str())
-                .map(|c| c.contains("cc-notify"))
+                .map(|c| c.contains("local-ai-gateway"))
                 .unwrap_or(false)
         })
     } else {
@@ -65,8 +65,8 @@ pub(crate) fn is_cc_notify_entry(entry: &serde_json::Value) -> bool {
     }
 }
 
-/// Merge a cc-notify hook entry into a specific event type array within hooks.
-/// If an existing cc-notify entry is found, it is replaced; otherwise the new entry is appended.
+/// Merge a local-ai-gateway hook entry into a specific event type array within hooks.
+/// If an existing local-ai-gateway entry is found, it is replaced; otherwise the new entry is appended.
 pub(crate) fn merge_hook_entry(
     hooks: &mut serde_json::Value,
     event_name: &str,
@@ -80,8 +80,8 @@ pub(crate) fn merge_hook_entry(
         .as_array_mut()
         .unwrap();
 
-    // Replace existing cc-notify entry if present, otherwise append
-    if let Some(pos) = arr.iter().position(|e| is_cc_notify_entry(e)) {
+    // Replace existing local-ai-gateway entry if present, otherwise append
+    if let Some(pos) = arr.iter().position(|e| is_local_ai_gateway_entry(e)) {
         arr[pos] = entry;
     } else {
         arr.push(entry);

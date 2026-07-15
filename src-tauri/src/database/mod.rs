@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::sync::Mutex;
 
 /// Current schema version
-pub(crate) const SCHEMA_VERSION: i32 = 5;
+pub(crate) const SCHEMA_VERSION: i32 = 7;
 
 /// Safely serialize to JSON
 pub(crate) fn to_json_string<T: Serialize>(value: &T) -> Result<String, AppError> {
@@ -32,16 +32,15 @@ pub struct Database {
 }
 
 impl Database {
-    /// Initialize database at ~/.cc-notify/cc-notify.db
+    /// Initialize database at the desktop gateway config path.
     pub fn init() -> Result<Self, AppError> {
-        let db_path = get_app_config_dir().join("cc-notify.db");
+        let db_path = get_app_config_dir().join("local-ai-gateway.db");
 
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| AppError::io(parent, e))?;
         }
 
-        let conn = Connection::open(&db_path)
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        let conn = Connection::open(&db_path).map_err(|e| AppError::Database(e.to_string()))?;
 
         conn.pragma_update(None, "foreign_keys", "ON")
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -62,8 +61,7 @@ impl Database {
 
     /// In-memory database for testing
     pub fn memory() -> Result<Self, AppError> {
-        let conn = Connection::open_in_memory()
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        let conn = Connection::open_in_memory().map_err(|e| AppError::Database(e.to_string()))?;
 
         conn.pragma_update(None, "foreign_keys", "ON")
             .map_err(|e| AppError::Database(e.to_string()))?;

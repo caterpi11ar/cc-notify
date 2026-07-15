@@ -1,14 +1,14 @@
 [package]
-name = "cc-notify"
+name = "local-ai-gateway"
 version = "0.2.5"
-description = "Notification Manager for AI CLI Tools"
-authors = ["CC-Notify Team"]
+description = "Transparent Local AI Gateway for AI clients"
+authors = ["Local AI Gateway Team"]
 license = "MIT"
 edition = "2021"
 rust-version = "1.85.0"
 
 [lib]
-name = "cc_notify_lib"
+name = "local_ai_gateway_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 doctest = false
 
@@ -20,6 +20,10 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+rand = "0.8"
+reqwest = { version = "0.13.2", features = ["blocking", "json", "rustls"] }
+sha2 = "0.10"
 tauri = { version = "2.8.2", features = ["tray-icon", "image-png"] }
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"

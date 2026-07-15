@@ -1,7 +1,7 @@
 use rusqlite::Connection;
 use std::path::Path;
 
-/// Open the cc-notify database read-only
+/// Open the local-ai-gateway database read-only
 pub fn open_db(path: &Path) -> Result<Connection, String> {
     if !path.exists() {
         return Err(format!("Database not found at {}", path.display()));
@@ -10,7 +10,7 @@ pub fn open_db(path: &Path) -> Result<Connection, String> {
         .map_err(|e| format!("Failed to open database: {e}"))
 }
 
-/// Open the cc-notify database read-write
+/// Open the local-ai-gateway database read-write
 pub fn open_db_rw(path: &Path) -> Result<Connection, String> {
     if !path.exists() {
         return Err(format!(
