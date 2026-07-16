@@ -63,7 +63,6 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ```text
 src/                         Desktop React UI
 src-tauri/                   Tauri/Rust gateway backend
-local-ai-gateway-cli/        Hook workflows CLI
 example/ai-sdk-next/         Next.js + AI SDK test page
 tests/                       Frontend API logic tests
 ```

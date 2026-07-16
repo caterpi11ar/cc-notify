@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::sync::Mutex;
 
 /// Current schema version
-pub(crate) const SCHEMA_VERSION: i32 = 7;
+pub(crate) const SCHEMA_VERSION: i32 = 8;
 
 /// Safely serialize to JSON
 pub(crate) fn to_json_string<T: Serialize>(value: &T) -> Result<String, AppError> {
@@ -54,7 +54,6 @@ impl Database {
         };
         db.create_tables()?;
         db.apply_schema_migrations()?;
-        db.seed_builtin_data()?;
 
         Ok(db)
     }
@@ -70,7 +69,6 @@ impl Database {
             conn: Mutex::new(conn),
         };
         db.create_tables()?;
-        db.seed_builtin_data()?;
 
         Ok(db)
     }

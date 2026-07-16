@@ -24,16 +24,6 @@ pub enum AppError {
     Lock(String),
     #[error("Database error: {0}")]
     Database(String),
-    #[error("Channel error: {0}")]
-    Channel(String),
-    #[error("Template error: {0}")]
-    Template(String),
-    #[error("Rate limited")]
-    RateLimited,
-    #[error("Notification disabled (kill switch)")]
-    KillSwitch,
-    #[error("Quiet hours active")]
-    QuietHours,
     #[error("{0}")]
     Message(String),
 }

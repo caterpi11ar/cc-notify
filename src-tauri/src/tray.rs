@@ -19,7 +19,7 @@ pub fn create_tray(app: &AppHandle) -> Result<TrayIcon, tauri::Error> {
     let tray = TrayIconBuilder::new()
         .icon(icon)
         .menu(&menu)
-        .tooltip("CC Notify")
+        .tooltip("Local AI Gateway")
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "show" => {
                 if let Some(window) = app.get_webview_window("main") {

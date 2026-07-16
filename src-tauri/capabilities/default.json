@@ -9,7 +9,6 @@
     "core:window:allow-start-dragging",
     "core:window:allow-set-badge-count",
     "process:allow-restart",
-    "dialog:default",
-    "notification:default"
+    "dialog:default"
   ]
 }

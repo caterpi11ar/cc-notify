@@ -68,7 +68,6 @@ Real upstream tests are available in Rust and are ignored unless the required en
 ```text
 src/                         Desktop React UI
 src-tauri/                   Tauri/Rust gateway backend
-local-ai-gateway-cli/        Bundled CLI used by hook workflows
 example/ai-sdk-next/         Next.js + AI SDK gateway test page
 tests/                       Frontend API logic tests
 ```
